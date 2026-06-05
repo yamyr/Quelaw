@@ -1,0 +1,37 @@
+MEMORANDUM OF ADVICE
+
+To:      Instructing Solicitors
+From:    Chambers
+Re:      Negligence and Contractual Claims — Preliminary Assessment
+
+1. Duty of care. The governing test for the existence of a duty of care in
+   negligence in Singapore remains the single two-stage test of proximity and
+   policy articulated in Spandeck Engineering (S) Pte Ltd v Defence Science &
+   Technology Agency [2007] SGCA 37. We are satisfied that the threshold of
+   factual foreseeability is met on the present facts.
+
+2. Novel heads of loss. As to the recoverability of novel heads of damage, we
+   have considered ACB v Thomson Medical Pte Ltd [2016] SGCA 20, though counsel
+   should note that the citation as drafted may require checking.
+
+3. Termination. On the client's right to terminate the sub-contract, the
+   structured framework in RDC Concrete Pte Ltd v Sato Kogyo (S) Pte Ltd [2007]
+   SGCA 39 applies, and we consider the breach falls within the third situation
+   identified there.
+
+4. Recent authority. We would also draw attention to Lim Wei Ming v Oceanic
+   Shipping Pte Ltd [2024] SGHC 412, which counsel advises extends the duty of
+   care to purely commercial relationships in the shipping context.
+
+5. Statutory framework. The statutory basis for the contribution claim is
+   section 14 of the Civil Law Act, and we have separately considered section 45
+   of the Civil Law Act in relation to assignment. The criminal exposure, if
+   any, would arise under section 300 of the Penal Code. Counsel has also
+   referred us to section 7 of the Maritime Conventions Act.
+
+6. Procedure. Service should be effected in accordance with Order 9 Rule 6 of
+   the Rules of Court; an application to strike out may be brought under Order 21
+   Rule 2 of the Rules of Court.
+
+This memorandum was prepared with the assistance of an AI drafting tool and must
+be checked against primary sources before it is relied upon.
