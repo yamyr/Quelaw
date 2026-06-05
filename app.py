@@ -82,6 +82,9 @@ with st.sidebar:
         "paraphrased/placeholder, not authoritative legal text."
     )
 
+    st.divider()
+    st.caption("☁️ Cloud (hosted) version — to be added later. QueLaw currently runs locally.")
+
 
 # --- Main -----------------------------------------------------------------
 st.title("⚖️ QueLaw")

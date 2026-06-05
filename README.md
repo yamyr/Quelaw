@@ -30,6 +30,8 @@ Statuses use deliberately careful wording — never "fake" or "good law":
 
 Everything runs on your machine: local ChromaDB, local embeddings, local Streamlit. The **only** optional cloud touchpoint is the Claude API for higher-quality verification — and that's strictly optional. With no API key, QueLaw runs and demos **fully offline** using the heuristic verifier.
 
+> ☁️ **Cloud (hosted) version — to be added later.** A cloud-hosted deployment of QueLaw (no local setup required) is planned for a future release. For now, QueLaw runs locally as described above.
+
 ## Quick start
 
 Target **Python 3.12** (newer versions may lack ChromaDB wheels).
