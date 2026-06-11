@@ -20,7 +20,7 @@ jobs:
         run: python -m pip install --upgrade pip pytest
 
       - name: Byte-compile all modules
-        run: python -m py_compile app.py scripts/ingest.py scripts/check_demo.py quelaw/*.py
+        run: python -m py_compile app.py scripts/ingest.py scripts/check_demo.py scripts/check_demo_scenarios.py quelaw/*.py
 
       - name: Run tests
         # Runs in offline heuristic mode (no ChromaDB / API key) so it is

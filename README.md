@@ -63,6 +63,60 @@ a real case (`Spandeck … [2007] SGCA 37` → verified), a fabricated one
 (`Tan Ah Kow v Singapore Airlines [2025] SGHC 999` → not found), plus a statute
 and a rule.
 
+## Demo mode (for live demos)
+
+Flip the **🎬 Demo mode** toggle in the sidebar to swap the free-text box for a
+picker of curated scenarios. Demo mode runs the **offline heuristic verifier** —
+fully deterministic, **no API key, no internet, and no pre-built index required**
+— so the same scenario gives the same report on any laptop. Each scenario carries
+a one-line *talking point* for the presenter.
+
+| Scenario | Shows | Risk |
+|---|---|---|
+| 🎯 Hallucinated case | The headline check — catches a fabricated authority | High |
+| ✅ Clean draft | Doesn't cry wolf — all real, stays quiet | Low |
+| ⚠️ Right case, wrong citation | Flags a transcription slip for review, never "fake" | Medium |
+| 🧪 Mixed memo | All four outcomes on one screen | High |
+
+Lead with the **🎯 Hallucinated case** scenario — a fabricated case is the failure
+lawyers fear most and the check QueLaw does well today (dead-link and
+overturned-ruling checks are on the roadmap, not the demo).
+
+Verify the scenarios still behave before a demo:
+
+```bash
+py -3.12 scripts/check_demo_scenarios.py   # asserts every scenario's outcome
+```
+
+## Share the offline demo
+
+Demo mode needs **no API key, no internet, and no pre-built index**, so it travels
+well. Three ways to share, by audience:
+
+1. **A permanent link (judges / async review) — Streamlit Community Cloud.**
+   The repo is already on GitHub. Go to [share.streamlit.io](https://share.streamlit.io)
+   → sign in with GitHub → **New app** → pick this repo, branch `main`, main file
+   `app.py` → set **Python 3.12** in *Advanced settings* → **Deploy**. Leave
+   `ANTHROPIC_API_KEY` blank; the offline heuristic powers demo mode. You get a
+   stable `https://…streamlit.app` URL. (The committed `data/sandbox/` is all the
+   demo needs; `chroma/` is rebuilt on the server only if you leave demo mode.)
+
+2. **An instant link during a call — a tunnel (no deploy).** With the app running
+   locally (`streamlit run app.py`):
+
+   ```bash
+   cloudflared tunnel --url http://localhost:8501   # or: ngrok http 8501
+   ```
+
+   Shares a public HTTPS URL while your machine runs it. Same-network viewers can
+   also use the Network URL Streamlit prints. (Avoid the public-IP "External URL".)
+
+3. **Run-it-themselves (teammates / devs) — fully offline.** They clone, install,
+   and `streamlit run app.py`, then flip **🎬 Demo mode**. No key, no internet.
+   The only online step is the one-time embedder download, which happens *only* if
+   demo mode is off and you click *Rebuild index*. If you zip instead of cloning,
+   exclude `.venv/` and `chroma/`.
+
 ## Project layout
 
 ```
