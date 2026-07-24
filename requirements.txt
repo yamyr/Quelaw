@@ -1,7 +1,7 @@
 # QueLaw — Latest stack (Python 3.14 + Pydantic v2 enabled via ChromaDB/ecosystem + explicit pin)
-streamlit>=1.59.2
+streamlit>=1.60.0
 chromadb>=1.5.9
-pydantic>=2.10.0
+pydantic>=2.13.4
 python-dotenv>=1.2.2
-anthropic>=0.116.0        # optional at runtime; only used when ANTHROPIC_API_KEY is set
+anthropic>=0.119.0        # optional at runtime; only used when ANTHROPIC_API_KEY is set
 python-docx>=1.2.0       # optional .docx upload support
