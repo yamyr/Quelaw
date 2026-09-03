@@ -203,7 +203,7 @@ pydantic==2.13.5
     #   chromadb
     #   pydantic-settings
     #   quelaw
-pydantic-core==2.46.5
+pydantic-core==2.48.0
     # via pydantic
 pydantic-settings==2.15.0
     # via chromadb
@@ -320,7 +320,7 @@ watchfiles==1.2.0
     # via uvicorn
 websocket-client==1.9.2
     # via kubernetes
-websockets==16.1.1
+websockets==17.1
     # via
     #   streamlit
     #   uvicorn
