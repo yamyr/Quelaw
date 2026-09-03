@@ -4,8 +4,8 @@ Runs in the offline heuristic mode (no ChromaDB or API key needed), so it is
 deterministic in CI. Verifies the verification statuses and summary match the
 documented answer key in data/demo/test_memo_expected.md.
 
-    py -3.12 -m pytest tests/test_pipeline.py
-    py -3.12 tests/test_pipeline.py        # plain-assert fallback runner
+    py -3.14 -m pytest tests/test_pipeline.py
+    py -3.14 tests/test_pipeline.py        # plain-assert fallback runner
 """
 import pathlib
 import sys
@@ -52,6 +52,66 @@ def test_wrong_year_citation_is_uncertain():
 
 def test_real_case_is_verified():
     assert _find(_report(), "[2007] SGCA 37").status == VERIFIED
+
+
+def test_subsection_is_not_verified_from_parent_section():
+    from quelaw.schema import REQUIRES_REVIEW
+
+    report, citations = check_draft("See section 14(999) of the Civil Law Act.", use_llm=False)
+    assert citations[0].section == "14(999)"
+    assert report.results[0].status == REQUIRES_REVIEW
+
+
+def test_adversarial_mismatched_case_name_is_uncertain():
+    # Real neutral citation ([2007] SGCA 37 is Spandeck), but fabricated case name.
+    draft = "Counsel relies on Fake Shipping Ltd v Bad Transport Pte Ltd [2007] SGCA 37."
+    report, _ = check_draft(draft, use_llm=False)
+    assert len(report.results) == 1
+    assert report.results[0].status == UNCERTAIN
+
+
+def test_suggested_fix_generated_for_uncertain_citation():
+    draft = "On novel heads of loss, see ACB v Thomson Medical Pte Ltd [2016] SGCA 20."
+    report, _ = check_draft(draft, use_llm=False)
+    assert len(report.results) == 1
+    r = report.results[0]
+    assert r.status == UNCERTAIN
+    assert r.suggested_fix is not None
+    assert "[2017] SGCA 20" in r.suggested_fix
+
+
+def test_quote_verification_verified_and_not_found():
+    # Case 1: Real quote from Spandeck summary
+    draft_real_quote = (
+        'In Spandeck Engineering (S) Pte Ltd v Defence Science & Technology Agency [2007] SGCA 37, '
+        'the court noted the "threshold requirement of factual foreseeability" applies.'
+    )
+    rep1, _ = check_draft(draft_real_quote, use_llm=False)
+    assert len(rep1.results) == 1
+    assert rep1.results[0].quote_status == "verified"
+
+    # Case 2: Fabricated quote
+    draft_fake_quote = (
+        'In Spandeck Engineering (S) Pte Ltd v Defence Science & Technology Agency [2007] SGCA 37, '
+        'the court held that "strict liability applies automatically to maritime contracts".'
+    )
+    rep2, _ = check_draft(draft_fake_quote, use_llm=False)
+    assert len(rep2.results) == 1
+    assert rep2.results[0].quote_status == "not_found"
+
+
+def test_annotator_html_rendering_and_apply_fix():
+    from quelaw.annotator import annotate_draft_html, apply_all_fixes, apply_fix
+
+    draft = "See ACB v Thomson Medical Pte Ltd [2016] SGCA 20."
+    report, _ = check_draft(draft, use_llm=False)
+
+    html_out = annotate_draft_html(draft, report.results)
+    assert "<mark" in html_out
+    assert "Uncertain match" in html_out
+
+    fixed_draft = apply_all_fixes(draft, report.results)
+    assert "[2017] SGCA 20" in fixed_draft
 
 
 if __name__ == "__main__":

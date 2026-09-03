@@ -100,6 +100,8 @@ def count() -> int:
 
 def query(text: str, n_results: int = TOP_K) -> List[dict]:
     """Return the top matching chunks for ``text`` (empty list if not built)."""
+    if not text or not text.strip():
+        return []
     try:
         col = get_collection()
         total = col.count()

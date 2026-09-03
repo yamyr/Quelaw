@@ -49,6 +49,10 @@ class Citation:
     section: Optional[str] = None
     order: Optional[str] = None
     rule: Optional[str] = None
+    start_char: int = -1
+    end_char: int = -1
+    quote_text: Optional[str] = None
+    context_sentence: Optional[str] = None
 
     def query_text(self) -> str:
         """Text used to query the vector store."""
@@ -64,6 +68,13 @@ class Citation:
 
     def key(self) -> str:
         """De-duplication key."""
+        if self.type == CASE and self.citation:
+            return " ".join(self.citation.lower().split())
+        if self.type == STATUTE and self.act and self.section:
+            clean_act = " ".join(self.act.lower().split())
+            return f"statute_{clean_act}_s_{self.section.lower()}"
+        if self.type == RULE and self.order and self.rule:
+            return f"rule_o{self.order.lower()}_r{self.rule.lower()}"
         basis = self.citation or self.raw_text
         return " ".join(basis.lower().split())
 
@@ -79,6 +90,12 @@ class VerificationResult:
     source_excerpt: Optional[str] = None
     source_url: Optional[str] = None
     manual_review_required: bool = True
+    suggested_fix: Optional[str] = None
+    quote_text: Optional[str] = None
+    quote_status: Optional[str] = None  # "verified", "not_found", None
+    external_search_url: Optional[str] = None
+    start_char: int = -1
+    end_char: int = -1
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -103,7 +120,7 @@ class Report:
 
 
 DISCLAIMER = (
-    "QueLaw is a legal verification support tool. It does not provide legal "
+    "Quelaw is a legal verification support tool. It does not provide legal "
     "advice and does not replace professional legal judgment. All flagged items "
     "should be manually reviewed against official legal sources before use."
 )

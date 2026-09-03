@@ -134,11 +134,13 @@ def _format_sources(sources: List[dict]) -> str:
 
 
 def verify_citation(citation: Citation, sources: List[dict]) -> Optional[dict]:
+    quote_info = f"\nAttributed Quote: {citation.quote_text!r}" if citation.quote_text else ""
     user = (
         f"Citation to verify: {citation.raw_text}\n"
         f"Parsed: type={citation.type}, case_name={citation.case_name}, "
         f"citation={citation.citation}, act={citation.act}, "
-        f"section={citation.section}, order={citation.order}, rule={citation.rule}\n\n"
+        f"section={citation.section}, order={citation.order}, rule={citation.rule}"
+        f"{quote_info}\n\n"
         f"Retrieved candidate sources from the trusted Singapore sandbox:\n"
         f"{_format_sources(sources)}\n\n"
         "Decide the verification status using ONLY the retrieved sources.\n"
@@ -146,10 +148,12 @@ def verify_citation(citation: Citation, sources: List[dict]) -> Optional[dict]:
         '["verified","not_found_in_dataset","uncertain_match","requires_manual_review"], '
         '"confidence": number 0..1, "explanation": string (<=40 words, neutral, '
         'no overclaiming), "source_title": string or null, "source_excerpt": '
-        'string or null, "manual_review_required": boolean}.\n'
+        'string or null, "manual_review_required": boolean, '
+        '"suggested_fix": string or null}.\n'
         "Rules: use 'verified' only if a retrieved source clearly matches the SAME "
         "authority (same citation, or same Act and section). If a similar but not "
-        "identical authority appears, use 'uncertain_match'. If nothing matches, "
+        "identical authority appears (e.g. wrong year or title typo), use 'uncertain_match' "
+        "and provide the suggested_fix. If nothing matches, "
         "use 'not_found_in_dataset' (never call it fake). If a source partly "
         "supports it, use 'requires_manual_review'."
     )
