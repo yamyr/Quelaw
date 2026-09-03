@@ -53,7 +53,7 @@ def _clean(text: str) -> str:
     return " ".join(text.split()).strip(" ,.;")
 
 
-def _extract_context_and_quote(text: str, start: int, end: int) -> tuple[str, Optional[str]]:
+def _extract_context_and_quote(text: str, start: int, end: int) -> tuple[str, str | None]:
     """Extract the surrounding sentence and any enclosed quotation near the citation."""
     left = 0
     for i in range(start - 1, -1, -1):
