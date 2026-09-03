@@ -49,7 +49,7 @@ HERO = Scenario(
     talking_point=(
         "Everything here reads plausibly — but Lim Wei Ming v Oceanic Shipping "
         "doesn't exist. A fabricated case is the failure lawyers fear most, and "
-        "it's exactly what QueLaw is built to catch. Watch it flag the fake while "
+        "it's exactly what Quelaw is built to catch. Watch it flag the fake while "
         "passing the two genuine authorities."
     ),
     draft="""MEMORANDUM — DUTY OF CARE (DRAFT PREPARED WITH AI ASSISTANCE)
@@ -80,7 +80,7 @@ CLEAN = Scenario(
     tagline="Every authority is real and correctly cited — the tool should stay quiet.",
     talking_point=(
         "Just as important as catching fakes: not crying wolf. Every citation here "
-        "checks out, so QueLaw returns Low risk and gets out of the lawyer's way. "
+        "checks out, so Quelaw returns Low risk and gets out of the lawyer's way. "
         "A checker that flags everything is a checker nobody trusts."
     ),
     draft="""MEMORANDUM — CONTRACT AND NEGLIGENCE (CLEAN DRAFT)
@@ -115,7 +115,7 @@ WRONG_CITATION = Scenario(
     tagline="A real case cited with the wrong year — a transcription slip, not a fabrication.",
     talking_point=(
         "ACB v Thomson Medical is a real, leading case — but the year is wrong "
-        "(it's [2017], not [2016]). QueLaw flags it as an uncertain match for "
+        "(it's [2017], not [2016]). Quelaw flags it as an uncertain match for "
         "review rather than screaming 'fake'. That careful wording is what earns a "
         "lawyer's trust: a wrong 'fake' label is as damaging as a missed one."
     ),

@@ -1,6 +1,6 @@
 """Smoke test for the curated demo scenarios.
 
-    py -3.12 scripts/check_demo_scenarios.py
+    py -3.14 scripts/check_demo_scenarios.py
 
 Runs every scenario in ``quelaw/demo.py`` through the offline heuristic pipeline
 (the exact path demo mode uses) and asserts each citation lands on its expected

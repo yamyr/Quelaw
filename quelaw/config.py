@@ -1,4 +1,4 @@
-"""Configuration and environment for QueLaw.
+"""Configuration and environment for Quelaw.
 
 Everything runs locally. The only optional cloud touchpoint is the Claude API,
 which is enabled purely by the presence of ANTHROPIC_API_KEY. With no key, the

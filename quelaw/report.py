@@ -51,3 +51,50 @@ def build_report(results: List[VerificationResult]) -> Report:
         risk_detail=detail,
         disclaimer=DISCLAIMER,
     )
+
+
+def report_to_markdown(report: Report) -> str:
+    """Format a verification report as a structured Markdown document."""
+    from .schema import STATUS_ICON, STATUS_LABEL
+
+    s = report.summary
+    lines = [
+        "# Quelaw Verification Report",
+        "",
+        f"**Overall Risk:** {report.risk_level} — {report.risk_detail}",
+        "",
+        "## Summary",
+        f"- **Total Authorities:** {s.get('total', 0)}",
+        f"- **Verified in Dataset:** {s.get('verified', 0)}",
+        f"- **Not Found in Dataset:** {s.get('not_found', 0)}",
+        f"- **Uncertain Match:** {s.get('uncertain', 0)}",
+        f"- **Requires Manual Review:** {s.get('requires_review', 0)}",
+        "",
+        "## Citations",
+        "",
+    ]
+
+    if not report.results:
+        lines.append("No legal authorities were detected in the draft.")
+    else:
+        for i, r in enumerate(report.results, 1):
+            icon = STATUS_ICON.get(r.status, "•")
+            label = STATUS_LABEL.get(r.status, r.status)
+            lines.append(f"### {i}. {r.citation}")
+            lines.append(f"- **Type:** `{r.type}`")
+            lines.append(f"- **Status:** {icon} **{label}** (confidence: {r.confidence:.0%})")
+            lines.append(f"- **Explanation:** {r.explanation}")
+            if r.source_title:
+                lines.append(f"- **Matched Source:** {r.source_title}")
+            if r.source_excerpt:
+                lines.append(f"- **Source Excerpt:** {r.source_excerpt}")
+            if r.source_url:
+                lines.append(f"- **Source URL:** {r.source_url}")
+            lines.append("")
+
+    lines.extend([
+        "---",
+        f"*{report.disclaimer}*",
+        "",
+    ])
+    return "\n".join(lines)

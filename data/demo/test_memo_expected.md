@@ -1,9 +1,9 @@
-# QueLaw test memo — expected results
+# Quelaw test memo — expected results
 
 Test input: [`test_memo.txt`](test_memo.txt) / [`test_memo.docx`](test_memo.docx)
 
 A deliberately mixed AI-style legal memo that exercises **every** verification
-outcome. Run it through QueLaw (paste the `.txt`, or upload the `.docx`) and the
+outcome. Run it through Quelaw (paste the `.txt`, or upload the `.docx`) and the
 report should match the table below. Verified against the offline heuristic
 engine on 2026-06-05.
 
