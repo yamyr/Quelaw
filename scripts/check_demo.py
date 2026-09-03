@@ -1,6 +1,6 @@
 """Golden-path smoke test: run the pipeline over the demo memo and print results.
 
-    py -3.12 scripts/check_demo.py
+    uv run --locked python scripts/check_demo.py
 
 Exercises extraction -> retrieval -> verification -> report end to end. Uses the
 offline heuristic verifier by default (no API key required).

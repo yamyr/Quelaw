@@ -1,6 +1,6 @@
 """Build (or rebuild) the Micro-LawNet vector store from the sandbox.
 
-    py -3.12 scripts/ingest.py
+    uv run --locked python scripts/ingest.py
 
 On first run this downloads the small local embedding model (~once), then runs
 fully offline.

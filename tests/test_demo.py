@@ -3,7 +3,7 @@
 Each scenario must produce its advertised report through the offline heuristic
 pipeline (the path demo mode uses), so the live demo can't silently drift.
 
-Runs under pytest, or standalone:  py -3.12 tests/test_demo.py
+Runs under pytest, or standalone:  uv run --locked python tests/test_demo.py
 """
 import pathlib
 import sys
