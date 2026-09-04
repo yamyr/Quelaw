@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import json
+import re
+
+from pydantic import JsonValue
 
 from . import config
 from .schema import (
@@ -69,15 +72,21 @@ def report_to_markdown(report: Report) -> str:
         lines.extend([f"### {index}. Occurrence {result.occurrence_id}", ""])
         fields = result.to_dict()
         for key, value in fields.items():
-            if isinstance(value, (dict, list, tuple)):
+            if isinstance(value, (dict, list)):
                 lines.extend([f"**{key}**", "", _json_block(value), ""])
             else:
-                lines.append(f"- **{key}:** {json.dumps(value, ensure_ascii=False)}")
+                lines.append(f"- **{key}:** {_literal_json(value)}")
         lines.append("")
     lines.extend(["---", report.disclaimer, ""])
     return "\n".join(lines)
 
 
-def _json_block(value: dict | list | tuple) -> str:
+def _json_block(value: JsonValue) -> str:
     serialized = json.dumps(value, ensure_ascii=False, indent=2)
     return f"```json\n{serialized}\n```"
+
+
+def _literal_json(value: str | int | float | bool | None) -> str:
+    serialized = json.dumps(value, ensure_ascii=False)
+    delimiter = "`" * (1 + max((len(run.group()) for run in re.finditer(r"`+", serialized)), default=0))
+    return f"{delimiter}{serialized}{delimiter}"

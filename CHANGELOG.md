@@ -34,6 +34,8 @@ CI uses locked dependencies and adds dataset validation, offline evaluation, ful
 
 Local integration checks on 2026-09-04 used a fresh locked Python 3.14.4 environment with uv 0.12.9: 196 tests passed, all 48 evaluation cases matched, all four demo scenarios passed, and the golden-path smoke run remained offline. Dependency compatibility, compilation, Ruff `F821`, and requirements export drift checks passed. ChromaDB emitted one upstream `asyncio.iscoroutinefunction` deprecation warning. These local checks do not establish remote CI or release-demonstration approval; live Claude was not exercised by the offline evaluation.
 
+Final review added seven rendering regressions, bringing the suite to 203 passing tests. Exported scalar values and review reasons now preserve untrusted Markdown and HTML as literal text; the actual browser download was checked with a CommonMark renderer. Package version metadata and the design guide now agree with the 0.2.0 candidate.
+
 ### Unresolved ChromaDB advisories
 
 On **2026-09-04**, the installed `.venv` package and `uv.lock` both identify **`chromadb==1.5.9`**. The GitHub Global Advisory API was rechecked for all four advisories below. Each includes version 1.5.9 in its affected range, is not withdrawn, and lists `first_patched_version: null`.

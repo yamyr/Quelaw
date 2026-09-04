@@ -1526,6 +1526,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "markdown-it-py" },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -1542,6 +1543,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "markdown-it-py", specifier = ">=4.2,<5" },
     { name = "pytest", specifier = ">=9.1.1,<10" },
     { name = "ruff", specifier = ">=0.16.6" },
 ]

@@ -33,6 +33,12 @@ def _check_draft(app: AppTest) -> AppTest:
     ).click().run()
 
 
+def _draft_value(app: AppTest) -> str:
+    value = app.text_area[0].value
+    assert value is not None
+    return value
+
+
 def _load_scenario(app: AppTest, scenario: demo.Scenario) -> AppTest:
     app.toggle[0].set_value(True).run()
     return app.selectbox(key="demo_choice").select(scenario.title).run()
@@ -110,8 +116,8 @@ def test_report_verifies_when_suggested_fix_is_applied(app: AppTest, fix_button:
     if fix_button.startswith("fix_btn_"):
         next(box for box in app.selectbox if box.label == "Select citation occurrence").set_value(1).run()
     app.button(key=fix_button).click().run()
-    assert "[2017] SGCA 20" in app.text_area[0].value
-    assert "[2016] SGCA 20" not in app.text_area[0].value
+    assert "[2017] SGCA 20" in _draft_value(app)
+    assert "[2016] SGCA 20" not in _draft_value(app)
     assert not app.main.metric
     _check_draft(app)
 
@@ -152,7 +158,7 @@ def test_uploaded_draft_preserves_manual_edits_when_rechecked(app: AppTest, file
     # Given a draft loaded through the real file uploader.
     content = (config.DEMO_DIR / filename).read_bytes()
     app.file_uploader[0].set_value((filename, content, "application/octet-stream")).run()
-    assert "[2016] SGCA 20" in app.text_area[0].value
+    assert "[2016] SGCA 20" in _draft_value(app)
 
     # When the user replaces the uploaded text and asks for another report.
     app.text_area[0].set_value(demo.CLEAN.draft).run()
@@ -180,8 +186,8 @@ def test_uploaded_draft_preserves_correction_when_rechecked(app: AppTest, fix_la
     selected = next(index for index, result in enumerate(report.results) if result.correction)
     next(box for box in app.selectbox if box.label == "Select citation occurrence").set_value(selected).run()
     next(button for button in app.button if button.label.startswith(fix_label)).click().run()
-    assert "[2017] SGCA 20" in app.text_area[0].value
-    assert "[2016] SGCA 20" not in app.text_area[0].value
+    assert "[2017] SGCA 20" in _draft_value(app)
+    assert "[2016] SGCA 20" not in _draft_value(app)
     assert not app.main.metric
     _check_draft(app)
 
@@ -223,7 +229,7 @@ def test_second_occurrence_correction_preserves_other_occurrences(app: AppTest) 
     selector.set_value(1).run()
     assert any("Text fidelity:" in item.value for item in app.markdown)
     app.button(key="fix_btn_1").click().run()
-    assert app.text_area[0].value.split(".\n\n") == [
+    assert _draft_value(app).split(".\n\n") == [
         citation, citation.replace("2016", "2017"), citation,
     ]
     assert not app.download_button
@@ -268,3 +274,22 @@ def test_stale_index_notice_does_not_prevent_offline_review(app: AppTest, monkey
     _check_draft(app)
     assert not app.exception
     assert app.session_state["report"].results[0].status == VERIFIED
+
+
+def test_model_review_reason_uses_plain_text_widget(app: AppTest) -> None:
+    # Given a checked report with a model-like review reason containing Markdown/HTML.
+    app.text_area[0].set_value("See [2007] SGCA 37.").run()
+    _check_draft(app)
+    reason = '`review` ![pixel](https://tracker.invalid/image) [follow](https://tracker.invalid/link) <img src="https://tracker.invalid/html">'
+    report = app.session_state["report"]
+    report.results[0].review_reasons = (reason,)
+    report.results[0].manual_review_required = True
+    report.risk_level = "Medium"
+    # When Streamlit rerenders the evidence panel from the saved report.
+    app.run()
+    # Then the full reason is a text element, with review heading and risk warning retained.
+    assert not app.exception
+    assert any(item.value == reason for item in app.text)
+    assert all(reason not in item.value for item in [*app.warning, *app.markdown])
+    assert any("Review reasons" in item.value for item in app.markdown)
+    assert any("Overall risk: Medium" in item.value for item in app.warning)

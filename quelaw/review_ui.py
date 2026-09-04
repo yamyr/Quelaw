@@ -58,7 +58,7 @@ def _finding(result: VerificationResult, index: int) -> None:
     if result.review_reasons:
         st.write("**Review reasons**")
         for reason in result.review_reasons:
-            st.warning(reason)
+            st.text(reason)
     _source(result)
     if result.quote_evidence:
         st.subheader("Quotation evidence")
