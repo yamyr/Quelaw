@@ -7,5 +7,19 @@
   "date": "2017-03-22",
   "source_url": "https://www.elitigation.sg/ (placeholder — proof-of-concept sandbox)",
   "status": "current_or_unknown",
-  "text": "Proof-of-concept sandbox summary (paraphrased from public information; not authoritative text). The case arose from an in-vitro fertilisation mix-up. The Singapore Court of Appeal recognised a head of damage described as loss of genetic affinity, while declining to allow a claim for the ordinary costs of raising a healthy child as upkeep damages. ACB v Thomson Medical is a notable Singapore authority in the law of negligence and damages."
+  "text": "Proof-of-concept sandbox summary (paraphrased from public information; not authoritative text). The case arose from an in-vitro fertilisation mix-up. The Singapore Court of Appeal recognised a head of damage described as loss of genetic affinity, while declining to allow a claim for the ordinary costs of raising a healthy child as upkeep damages. ACB v Thomson Medical is a notable Singapore authority in the law of negligence and damages.",
+  "provenance": {
+    "text_kind": "paraphrase",
+    "coverage": "summary",
+    "official_url": null,
+    "retrieved_on": null,
+    "version_label": null,
+    "reuse_status": "unverified",
+    "reuse_basis": null,
+    "limitations": [
+      "Legacy source_url is a placeholder, not a verified official source link.",
+      "No source retrieval date, source version, or reuse permission has been verified.",
+      "Sandbox paraphrase; the original judgment text is not available and quotations cannot be authenticated."
+    ]
+  }
 }

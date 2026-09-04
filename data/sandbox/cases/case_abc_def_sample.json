@@ -7,5 +7,19 @@
   "date": "2023-01-01",
   "source_url": "placeholder — synthetic demo entry",
   "status": "sample",
-  "text": "SYNTHETIC SAMPLE ENTRY (not a real case). Included only so the demo has a controlled High Court example with a clean neutral citation. This dummy authority concerns a generic commercial dispute and exists purely to exercise the verification flow."
+  "text": "SYNTHETIC SAMPLE ENTRY (not a real case). Included only so the demo has a controlled High Court example with a clean neutral citation. This dummy authority concerns a generic commercial dispute and exists purely to exercise the verification flow.",
+  "provenance": {
+    "text_kind": "synthetic",
+    "coverage": "summary",
+    "official_url": null,
+    "retrieved_on": null,
+    "version_label": null,
+    "reuse_status": "unverified",
+    "reuse_basis": null,
+    "limitations": [
+      "Legacy source_url is a placeholder, not a verified official source link.",
+      "No source retrieval date, source version, or reuse permission has been verified.",
+      "Synthetic demo authority, expressly not a real case; it cannot support a legal proposition."
+    ]
+  }
 }

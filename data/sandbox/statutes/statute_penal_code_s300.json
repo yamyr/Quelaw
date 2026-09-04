@@ -6,5 +6,19 @@
   "version_date": "2020-12-31",
   "source_url": "https://sso.agc.gov.sg/ (placeholder — proof-of-concept sandbox)",
   "status": "current_or_unknown",
-  "text": "Proof-of-concept sandbox entry. Section 300 of the Penal Code (Singapore) is the provision that defines murder. The full authoritative text is not reproduced in this sandbox; verify the current wording against Singapore Statutes Online (sso.agc.gov.sg). This entry exists so the verifier can confirm that the Act and section appear in the trusted dataset."
+  "text": "Proof-of-concept sandbox entry. Section 300 of the Penal Code (Singapore) is the provision that defines murder. The full authoritative text is not reproduced in this sandbox; verify the current wording against Singapore Statutes Online (sso.agc.gov.sg). This entry exists so the verifier can confirm that the Act and section appear in the trusted dataset.",
+  "provenance": {
+    "text_kind": "synthetic",
+    "coverage": "summary",
+    "official_url": null,
+    "retrieved_on": null,
+    "version_label": null,
+    "reuse_status": "unverified",
+    "reuse_basis": null,
+    "limitations": [
+      "Legacy source_url is a placeholder, not a verified official source link.",
+      "No source retrieval date, source version, or reuse permission has been verified.",
+      "Synthetic provision placeholder; authoritative provision wording and current-law status are not available."
+    ]
+  }
 }
