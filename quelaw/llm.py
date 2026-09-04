@@ -1,167 +1,112 @@
-"""Optional Claude layer.
-
-Used for (a) an extraction fallback and (b) higher-quality verification grounded
-in retrieved sources. Every entry point degrades gracefully: on any error it
-returns None / [] so the caller falls back to the offline heuristic path.
-
-The model is told to behave as a verification assistant, never a lawyer, and to
-answer only from the retrieved sources (RAG) — not from memory.
-"""
+"""Strict optional Claude boundaries for extraction and source-bound verdicts."""
 from __future__ import annotations
 
-import json
 import re
-from typing import List, Optional
+from collections.abc import Sequence
+from typing import ClassVar, Literal
+
+import anthropic
+from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
 from . import config
-from .schema import CASE, RULE, STATUTE, UNKNOWN, Citation
+from .evidence_types import ClaudeVerdict, NonEmptyText
+from .provenance import SourceRecord
+from .schema import Citation
 
 SYSTEM_PROMPT = (
-    "You are a legal citation verification assistant for Singapore legal "
-    "materials. You do not provide legal advice. You only compare extracted "
-    "legal references against the retrieved source materials you are given. "
-    "If a citation is not found in the retrieved sources, say it is not found "
-    "in the dataset. Do not invent cases, statutes, citations, or source "
-    "references. If the retrieved source does not support a conclusion, mark it "
-    "as requiring manual review. Never describe a case as 'fake'. Always return "
-    "a single JSON object and nothing else."
+    "You are a legal citation verification assistant for Singapore legal materials. "
+    "Compare references only with the supplied candidate sources. Do not invent "
+    "authorities, source text, metadata, or legal conclusions. Return one JSON object."
 )
 
-_ALLOWED_STATUS = {
-    "verified",
-    "not_found_in_dataset",
-    "uncertain_match",
-    "requires_manual_review",
-}
 
+class ClaudeResponseError(ValueError):
+    """The optional model boundary could not provide a usable typed response."""
 
-def _client():
-    import anthropic
+    reason: str
 
-    return anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(reason)
 
 
 def _message(system: str, user: str, max_tokens: int = 800) -> str:
-    client = _client()
-    resp = client.messages.create(
-        model=config.ANTHROPIC_MODEL,
-        max_tokens=max_tokens,
-        system=[
-            {
-                "type": "text",
-                "text": system,
-                # Cache the (static) system prompt across citations in a draft.
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": user}],
-    )
-    return "".join(block.text for block in resp.content if block.type == "text")
+    """Own the SDK client and bound latency for this optional external call."""
+    with anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY, timeout=30.0, max_retries=0) as client:
+        response = client.messages.create(
+            model=config.ANTHROPIC_MODEL, max_tokens=max_tokens,
+            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": user}],
+        )
+    return "".join(block.text for block in response.content if block.type == "text")
 
 
-def _parse_json(text: str):
-    text = text.strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```[a-zA-Z]*\n?|\n?```$", "", text).strip()
-    try:
-        return json.loads(text)
-    except Exception:
-        match = re.search(r"(\{.*\}|\[.*\])", text, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group(1))
-            except Exception:
-                return None
-    return None
+def _json_body(text: str) -> str:
+    """Permit only an enclosing Markdown code fence around an otherwise exact JSON body."""
+    return re.sub(r"\A```(?:json)?\s*\n(.*?)\n```\Z", r"\1", text.strip(), flags=re.DOTALL)
 
 
-# --- Extraction fallback --------------------------------------------------
+class ExtractedCitation(BaseModel):
+    """Typed metadata from extraction; raw spans are anchored by the extraction layer."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(strict=True, frozen=True, extra="forbid")
+
+    raw_text: NonEmptyText
+    type: Literal["case", "statute", "rule", "unknown"] = "unknown"
+    case_name: str | None = None
+    citation: str | None = None
+    act: str | None = None
+    section: str | None = None
+    order: str | None = None
+    rule: str | None = None
+
 
 _EXTRACT_SYSTEM = (
-    "You extract Singapore legal authorities from text. Return a JSON array. "
-    "Each item has: raw_text, type (one of case, statute, rule, unknown), and "
-    "the relevant fields among case_name, citation, act, section, order, rule. "
-    "Only include authorities actually present in the text. Do not invent any. "
-    "Return only the JSON array."
+    "Extract Singapore legal authorities actually present in the text. Return a JSON array. "
+    "Each item has raw_text, type (case, statute, rule, unknown), and relevant optional "
+    "string fields case_name, citation, act, section, order, rule. Do not invent references."
 )
 
 
-def extract_citations(text: str) -> List[Citation]:
+def extract_citations(text: str) -> list[Citation]:
+    """Reject malformed extraction metadata before any span can enter the draft model."""
     try:
         raw = _message(_EXTRACT_SYSTEM, text, max_tokens=1000)
-        data = _parse_json(raw)
-    except Exception:
+        records = TypeAdapter(list[ExtractedCitation]).validate_json(_json_body(raw))
+    except (anthropic.APIError, ConnectionError, TimeoutError, ValidationError):
         return []
-    if not isinstance(data, list):
-        return []
-
-    valid_types = {CASE, STATUTE, RULE, UNKNOWN}
-    out: List[Citation] = []
-    for item in data:
-        if not isinstance(item, dict) or not item.get("raw_text"):
-            continue
-        ctype = item.get("type", UNKNOWN)
-        out.append(
-            Citation(
-                raw_text=str(item["raw_text"]),
-                type=ctype if ctype in valid_types else UNKNOWN,
-                case_name=item.get("case_name"),
-                citation=item.get("citation"),
-                act=item.get("act"),
-                section=str(item["section"]) if item.get("section") else None,
-                order=str(item["order"]) if item.get("order") else None,
-                rule=str(item["rule"]) if item.get("rule") else None,
-            )
-        )
-    return out
+    return [Citation(
+        raw_text=record.raw_text, type=record.type, case_name=record.case_name,
+        citation=record.citation, act=record.act, section=record.section,
+        order=record.order, rule=record.rule,
+    ) for record in records]
 
 
-# --- Verification ---------------------------------------------------------
-
-def _format_sources(sources: List[dict]) -> str:
-    if not sources:
-        return "(No candidate sources were retrieved from the sandbox.)"
-    lines = []
-    for i, s in enumerate(sources, 1):
-        m = s.get("metadata", {})
-        lines.append(
-            f"[{i}] title={m.get('title')!r} citation={m.get('citation')!r} "
-            f"type={m.get('source_type')!r} section={m.get('section')!r} "
-            f"provision={m.get('provision')!r}\n"
-            f"    excerpt: {s.get('excerpt', '')[:500]}"
-        )
-    return "\n".join(lines)
+def _format_sources(sources: Sequence[SourceRecord]) -> str:
+    return "\n".join(source.model_dump_json() for source in sources) or "No candidate sources available."
 
 
-def verify_citation(citation: Citation, sources: List[dict]) -> Optional[dict]:
-    quote_info = f"\nAttributed Quote: {citation.quote_text!r}" if citation.quote_text else ""
+def verify_citation(citation: Citation, sources: Sequence[SourceRecord]) -> ClaudeVerdict:
+    """Parse the model response once; adaptation validates it against actual candidates."""
     user = (
-        f"Citation to verify: {citation.raw_text}\n"
-        f"Parsed: type={citation.type}, case_name={citation.case_name}, "
-        f"citation={citation.citation}, act={citation.act}, "
-        f"section={citation.section}, order={citation.order}, rule={citation.rule}"
-        f"{quote_info}\n\n"
-        f"Retrieved candidate sources from the trusted Singapore sandbox:\n"
-        f"{_format_sources(sources)}\n\n"
-        "Decide the verification status using ONLY the retrieved sources.\n"
-        'Return JSON exactly: {"status": one of '
-        '["verified","not_found_in_dataset","uncertain_match","requires_manual_review"], '
-        '"confidence": number 0..1, "explanation": string (<=40 words, neutral, '
-        'no overclaiming), "source_title": string or null, "source_excerpt": '
-        'string or null, "manual_review_required": boolean, '
-        '"suggested_fix": string or null}.\n'
-        "Rules: use 'verified' only if a retrieved source clearly matches the SAME "
-        "authority (same citation, or same Act and section). If a similar but not "
-        "identical authority appears (e.g. wrong year or title typo), use 'uncertain_match' "
-        "and provide the suggested_fix. If nothing matches, "
-        "use 'not_found_in_dataset' (never call it fake). If a source partly "
-        "supports it, use 'requires_manual_review'."
+        f"Citation: {citation.raw_text}\nParsed: type={citation.type}, case_name={citation.case_name}, "
+        f"citation={citation.citation}, act={citation.act}, section={citation.section}, "
+        f"order={citation.order}, rule={citation.rule}\nNearby quote: {citation.quote_text!r}\n"
+        f"Candidate sources (source_id must equal a document_id):\n{_format_sources(sources)}\n"
+        "Return JSON with exactly these required fields: status (verified, not_found_in_dataset, "
+        "uncertain_match, requires_manual_review), confidence (finite number from 0 through 1), "
+        "explanation (nonempty string), source_id (candidate document_id or null when not found), "
+        "source_excerpt (an exact contiguous source substring or null), manual_review_required "
+        "(boolean), suggested_fix (null or exact canonical reference from source metadata). "
+        "Use verified only for the same authority including the exact requested provision. "
+        "Do not return source_title or source_url: these are derived from the selected record. "
+        "Quotation evidence is checked independently and is not authenticated by your verdict."
     )
     try:
         raw = _message(SYSTEM_PROMPT, user)
-        data = _parse_json(raw)
-    except Exception:
-        return None
-    if not isinstance(data, dict) or data.get("status") not in _ALLOWED_STATUS:
-        return None
-    return data
+        return ClaudeVerdict.model_validate_json(_json_body(raw))
+    except ValidationError as error:
+        fields = ", ".join(".".join(str(part) for part in detail["loc"]) or "response" for detail in error.errors())
+        raise ClaudeResponseError(f"Claude response failed validation ({fields}); deterministic verification used.") from error
+    except (anthropic.APIError, ConnectionError, TimeoutError) as error:
+        raise ClaudeResponseError(f"Claude request unavailable ({type(error).__name__}); deterministic verification used.") from error

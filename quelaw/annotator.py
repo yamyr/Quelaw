@@ -7,9 +7,14 @@ for 1-click transcription fixes.
 from __future__ import annotations
 
 import html
-import re
 from typing import List, Tuple
 
+from .corrections import (
+    OverlappingCorrectionsError as OverlappingCorrectionsError,
+    StaleCorrectionError as StaleCorrectionError,
+    apply_correction as apply_correction,
+    apply_corrections as apply_corrections,
+)
 from .schema import (
     NOT_FOUND,
     REQUIRES_REVIEW,
@@ -88,20 +93,3 @@ def annotate_draft_html(draft: str, results: List[VerificationResult]) -> str:
         f"font-size:1.02rem;line-height:1.75;box-shadow:0 1px 3px rgba(0,0,0,0.05);'>"
         f"{rendered}</div>"
     )
-
-
-def apply_fix(draft: str, old_citation: str, new_citation: str) -> str:
-    """Replace an occurrence of old_citation with new_citation in draft."""
-    if not old_citation.strip() or not new_citation:
-        return draft
-    pattern = r"\s+".join(re.escape(part) for part in old_citation.split())
-    return re.sub(pattern, lambda match: new_citation, draft, count=1)
-
-
-def apply_all_fixes(draft: str, results: List[VerificationResult]) -> str:
-    """Apply all suggested fixes from the verification results to the draft."""
-    updated = draft
-    for r in results:
-        if r.suggested_fix and r.citation:
-            updated = apply_fix(updated, r.citation, r.suggested_fix)
-    return updated

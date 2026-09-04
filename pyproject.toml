@@ -1,6 +1,6 @@
 [project]
 name = "quelaw"
-version = "0.1.0"
+version = "0.2.0"
 description = "Quelaw: Singapore legal citation verification against a controlled dataset"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
@@ -19,7 +19,11 @@ Repository = "https://github.com/yamyr/Quelaw"
 Issues = "https://github.com/yamyr/Quelaw/issues"
 
 [dependency-groups]
-dev = ["pytest>=9.1.1,<10"]
+dev = [
+    "markdown-it-py>=4.2,<5",
+    "pytest>=9.1.1,<10",
+    "ruff>=0.16.6",
+]
 
 [tool.uv]
 package = false

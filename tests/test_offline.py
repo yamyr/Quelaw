@@ -5,6 +5,7 @@ import pytest
 from quelaw import config, llm, vectorstore
 from quelaw.extraction import extract_citations
 from quelaw.pipeline import check_draft
+from quelaw.provenance import Dataset
 from quelaw.schema import VERIFIED
 from quelaw.verification import verify
 
@@ -19,10 +20,14 @@ def test_memo_report_skips_retrieval_when_heuristic_mode_is_selected(
     # Given an offline run and a retrieval service that must never be touched.
     monkeypatch.setattr(config, "ANTHROPIC_API_KEY", api_key)
 
-    def unexpected_query(text: str, n_results: int) -> Never:
+    def unexpected_query(text: str, n_results: int, *, dataset: Dataset | None = None) -> Never:
         pytest.fail(f"Heuristic mode queried the vector store: {text!r}")
 
+    def unexpected_message(system: str, user: str, max_tokens: int = 800) -> Never:
+        pytest.fail("Heuristic mode called Claude")
+
     monkeypatch.setattr(vectorstore, "query", unexpected_query)
+    monkeypatch.setattr(llm, "_message", unexpected_message)
     draft = (config.DEMO_DIR / "test_memo.txt").read_text(encoding="utf-8")
 
     # When the bundled memo runs through the real pipeline.
@@ -35,6 +40,8 @@ def test_memo_report_skips_retrieval_when_heuristic_mode_is_selected(
         "not_found": 2,
         "uncertain": 1,
         "requires_review": 2,
+        "distinct_authorities": 10,
+        "reviewed_occurrences": 5,
     }
     assert report.risk_level == "High"
 
@@ -49,7 +56,7 @@ def test_verification_retrieves_and_falls_back_when_llm_is_unavailable(
     queries: list[tuple[str, int]] = []
     llm_attempts: list[int] = []
 
-    def empty_query(text: str, n_results: int) -> list[Never]:
+    def empty_query(text: str, n_results: int, *, dataset: Dataset | None = None) -> list[Never]:
         queries.append((text, n_results))
         return []
 
@@ -67,3 +74,5 @@ def test_verification_retrieves_and_falls_back_when_llm_is_unavailable(
     assert queries == [("[2007] SGCA 37", config.TOP_K)]
     assert len(llm_attempts) == 1
     assert result.status == VERIFIED
+    assert result.verifier == "heuristic"
+    assert result.fallback_reason is not None

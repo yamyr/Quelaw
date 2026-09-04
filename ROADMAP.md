@@ -1,35 +1,43 @@
 # Quelaw roadmap
 
-The next milestone is a documented, evaluable citation-checking prototype with traceable sources and a repeatable release process. The current sandbox remains a demonstration dataset until its provenance and coverage are strengthened.
+Version **0.2.0 is an untagged release candidate** for reviewing citation occurrences against traceable, limited source evidence. The nine-record sandbox remains a demonstration dataset: five paraphrases and four synthetic entries, all summaries, with unknown retrieval/version details and unverified reuse status. See the [inventory](README.md#dataset-and-provenance) and [candidate notes](CHANGELOG.md).
 
-## Available now
+## 0.2 candidate scope
 
-- Singapore case, statute, and rule extraction from pasted text or `.txt`/`.docx` uploads.
-- Deterministic sandbox matching and curated offline demo scenarios.
-- Optional ChromaDB retrieval and Claude extraction/verification.
-- Four controlled verification outcomes, summary counts, and overall risk.
-- Annotated drafts, citation analysis cards, suggested transcription fixes, and external search links for manual review.
-- Experimental nearby-quote match hints, plus Markdown and JSON report exports.
-- A Python 3.14 environment managed with uv, reproducible dependencies, and offline pipeline and Streamlit interaction checks in CI.
+- Singapore case, statute, and rule extraction from pasted text or `.txt`/`.docx` uploads, preserving repeated occurrences and full provision identifiers.
+- Validated source provenance and a canonical dataset fingerprint recorded in reports and retrieval metadata.
+- Occurrence-specific corrections bound to the reviewed draft hash and span, with stale/overlap rejection and a required recheck after edits.
+- Separate authority and quotation findings, conservative treatment of paraphrases/incomplete text, and observable fallback when optional Claude evidence is invalid.
+- A finding selector, occurrence context, provenance and review reasons, plus matching Markdown/JSON evidence using report schema `2`.
+- Offline evaluation with at least 30 independently specified engineering fixtures, material expectation comparison, and separate extraction, verification, and quotation results.
+- Python 3.14 and locked uv dependencies, dataset/evaluation checks, tests and demo checks, locked Ruff undefined-name lint, and requirements export drift checks in CI.
 
-These features are implemented. Their presence does not establish comprehensive legal coverage, quote authenticity, or current-law status.
+These capabilities support inspection and regression checking. They do not establish legal accuracy, comprehensive coverage, quotation authenticity, or current-law status. Evaluation legal expectations remain `legal_domain_review_pending`.
 
-## Next milestone
+## Release gates still required
 
-| Priority | Work | Completion evidence |
-|---|---|---|
-| 1. Source provenance | Define the supported sandbox scope; record source identity, official URL, retrieval date, version, and reuse basis. Clearly distinguish original text from paraphrases and fixtures. | A dataset inventory with traceable entries, explicit coverage limits, and checks for missing provenance. |
-| 2. Evaluation | Create an independently reviewed evaluation set covering matched authorities, fabricated fixtures, out-of-scope references, citation mismatches, provisions, and quotes. Measure extraction and verification outcomes separately. | Versioned inputs and expected results, documented failure categories, and a repeatable offline evaluation report. |
-| 3. Review reliability | Extend regression coverage for repeated references, edited drafts, correction spans, quote attribution, and LLM source selection. Make quote uncertainty and exported findings consistent with the reviewed evidence. | Regression cases for identified failures and documented behavior for ambiguous matches and incomplete source text. |
-| 4. Release readiness | Exercise installation and demo flows on supported environments; review configuration, dependency updates, and deployment instructions. Record tested limitations and the dataset version used. | A tagged release with passing checks, a concise changelog, and a reproducible demonstration procedure. |
+| Gate | Required evidence |
+|---|---|
+| Reproducible environment | Fresh locked install, dependency checks, dataset fingerprint, evaluation summary, tests, lint, and demo runs on supported Python. |
+| Review workflow | Recorded upload → repeated occurrence selection → provenance inspection → one correction → recheck → matching Markdown/JSON downloads, including keyboard and 390 px browser checks. |
+| Independent engineering review | Review of implementation, failure cases, evaluation expectations, and unresolved limitations; green CI for the candidate commit. |
+| Dependency security | Dated recheck of all four ChromaDB advisories, kept visible while unresolved. Embedded use does not dismiss the alerts. |
+| Release authorization | An explicit instruction after review and demonstration before creating a `v0.2.0` tag or deploying. |
 
-Changes in dataset coverage can legitimately change a result from **Not found in dataset** or **Requires manual review** to **Verified in dataset**. Evaluation updates should identify whether a changed outcome follows from new source coverage or a changed matching rule.
+The [release procedure](CONTRIBUTING.md#release-demonstration) defines the concrete demonstration. The [changelog](CHANGELOG.md) records candidate identity and limitations without claiming release approval.
+
+## Next evidence and coverage work
+
+- Obtain and record qualified legal domain review of evaluation expectations before making legal accuracy or coverage claims.
+- Verify official source URLs, retrieval/version information, and reuse basis before replacing the current summary fixtures or expanding the inventory.
+- Add independent cases from reviewed source material. Explain whether each changed expected result follows from new coverage or a changed matching rule.
+- Resolve the four [ChromaDB advisories](CHANGELOG.md#unresolved-chromadb-advisories) through a verified patched version or reviewed alternative before any Chroma HTTP server or multi-tenant deployment; update the lock/export and repeat relevant runtime/security checks.
 
 ## Later work, subject to evidence and access
 
 - Expand official-source coverage and assess licensed LawNet integration after provenance and reuse requirements are settled.
-- Add URL availability checks with a clear distinction between a broken link and an unsupported authority.
+- Add URL availability checks with a distinction between a broken link and an unsupported authority.
 - Investigate version, amendment, and subsequent-treatment evidence before making any claim about current legal status or overturned rulings.
-- Evaluate a maintained hosted service once the prototype's source quality and deployment behavior are established.
+- Evaluate a maintained hosted service after source quality, dependency security, and deployment behavior are established.
 
-External search buttons currently provide manual follow-up links. They do not crawl official portals. The repository documents how to deploy a demo but does not advertise an existing hosted service.
+External search buttons provide manual follow-up links. They do not crawl official portals. The repository documents demo hosting options but does not advertise an existing hosted service; no tag or deployment is created by this milestone.

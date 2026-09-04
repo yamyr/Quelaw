@@ -8,7 +8,9 @@
 
 Quelaw checks whether legal authorities cited in an AI-generated draft match a small, controlled Singapore legal dataset called **Micro-LawNet**. Paste a draft or upload a `.txt` or `.docx` file to review its cases, statutes, and rules.
 
-This is a proof-of-concept citation checker. The sandbox contains paraphrased and placeholder material; a match establishes coverage in that dataset, not the validity of a legal argument or an authority's current legal status.
+**0.2.0 is an untagged release candidate.** It adds source provenance, occurrence-specific review and corrections, report schema `2`, and a repeatable offline evaluation. Release review and demonstration are separate gates; see the [changelog](CHANGELOG.md) and [release procedure](CONTRIBUTING.md#release-demonstration).
+
+This is a proof-of-concept citation checker. Its nine sandbox entries are paraphrased or synthetic summaries; a match establishes coverage in that dataset, not the validity of a legal argument or an authority's current legal status. The engineering evaluation awaits legal domain review and supports no legal accuracy claim.
 
 > **Disclaimer.** Quelaw is a legal verification support tool. It does not provide legal advice and does not replace professional legal judgment. Review flagged items against official legal sources such as [eLitigation](https://www.elitigation.sg/) and [Singapore Statutes Online](https://sso.agc.gov.sg/) before use.
 
@@ -19,12 +21,13 @@ Draft → extract citations → match sandbox authorities → verification repor
                            ↳ optional ChromaDB retrieval + Claude verification
 ```
 
-- **Extraction:** regular expressions recognize SG citations such as `[2007] SGCA 37`, `section 14 of the Civil Law Act`, and `Order 9 Rule 6`. Claude can optionally supplement extraction.
-- **Verification:** a deterministic heuristic compares references with the sandbox JSON. The optional Claude path uses candidate sources retrieved from a local ChromaDB index and falls back to the heuristic if the API call fails.
-- **Review:** a summary and risk level lead to an annotated draft and per-citation analysis. Cards show available source excerpts, quote-match hints, suggested corrections, and links for searching official sources.
-- **Corrections and export:** apply an individual suggestion or all suggestions, then check the edited draft again. Download the report as Markdown or JSON. JSON includes the detailed result fields; the Markdown report is a summary of citation findings and sources.
+- **Extraction:** regular expressions recognize SG citations such as `[2007] SGCA 37`, `section 14 of the Civil Law Act`, and `Order 9 Rule 6`. Each occurrence retains its draft offsets, including repeated references to the same authority. Claude can optionally supplement extraction with spans validated against the draft.
+- **Verification:** a deterministic heuristic compares references with the validated sandbox. The optional Claude path binds each usable verdict to a retrieved local source ID; invalid responses fall back to the heuristic with a visible reason. An index built for a different dataset must be rebuilt before retrieval.
+- **Review:** select a finding in the annotated draft/evidence workspace to inspect its occurrence, source identity, fidelity, coverage, quotation limits, and review reasons. Summaries distinguish citation occurrences from distinct authorities.
+- **Corrections:** preview a replacement for one occurrence or apply the available proposals together. Proposals carry the reviewed draft hash and exact span; stale or overlapping proposals are rejected before any change. An edit invalidates the report and requires a new check.
+- **Export:** Markdown and JSON carry the same material evidence. Report schema `2` includes the draft SHA-256, dataset fingerprint, verifier metadata, occurrence and distinct-authority counts, finding/source identities, review flags, quotation evidence, and correction proposals. Consumers of schema `1` must explicitly migrate.
 
-Quote-match hints are experimental comparisons against the sandbox text, which may be paraphrased or incomplete. They do not authenticate quotations against official judgments. Corrections are suggestions to review before applying.
+Quotation states are `match_in_available_text`, `not_found_in_available_text`, `evidence_limited`, or `ambiguous_attribution`. An exact phrase in a paraphrase remains evidence-limited, and missing text in an excerpt or summary cannot establish absence from the full source. The bundled summaries cannot authenticate quotations against official judgments. Corrections remain suggestions for human review.
 
 | Status | Meaning |
 |---|---|
@@ -62,7 +65,9 @@ Build the retrieval index before using Claude:
 uv run --locked python scripts/ingest.py
 ```
 
-The first ingestion downloads the embedding model. ChromaDB stores the resulting index locally in `chroma/`; the sidebar **🔁 Rebuild index** button performs the same rebuild. With Claude enabled, extraction can send draft text to the API and verification sends citation and retrieved-source context. Demo mode bypasses Claude even when a key is configured.
+The first ingestion downloads the embedding model. ChromaDB stores the resulting index locally in `chroma/`; the sidebar **🔁 Rebuild index** button performs the same rebuild. Index metadata records the dataset fingerprint and source IDs. If the dataset changes, explicitly rebuild the index; offline checking remains usable. With Claude enabled, extraction can send draft text to the API and verification sends citation and retrieved-source context. Demo mode bypasses Claude even when a key is configured.
+
+The locked ChromaDB version has four unresolved advisories. Read the [dependency security notes](CHANGELOG.md#unresolved-chromadb-advisories) before using retrieval or considering a server deployment.
 
 ### pip installation fallback
 
@@ -124,37 +129,71 @@ requirements.txt              # generated runtime export for pip consumers
 scripts/ingest.py             # build the ChromaDB vector store
 scripts/check_demo.py         # golden-path smoke run
 scripts/check_demo_scenarios.py # deterministic scenario checks
+scripts/check_dataset.py      # validate source provenance and print its fingerprint
+scripts/evaluate.py           # offline regression evaluation and baseline comparison
 quelaw/
   extraction.py              # regex and optional Claude extraction
   verification.py            # heuristic and Claude result handling
   vectorstore.py             # ChromaDB ingest and retrieval
-  sandbox.py                 # sandbox JSON loading
+  sandbox.py                 # validated sandbox loading adapter
+  provenance.py              # source inventory validation and dataset fingerprint
+  evidence.py                # conservative quotation and Claude source evidence
   annotator.py               # draft annotations and correction helpers
   llm.py                     # optional Claude API adapter
   report.py                  # summary, risk level, and Markdown export
   schema.py                  # result types and controlled vocabulary
   demo.py                    # curated scenarios and expected outcomes
-data/sandbox/                # proof-of-concept cases, statutes, and rules
+data/sandbox/                # nine proof-of-concept source summaries
 data/demo/                   # sample inputs and expected findings
+data/evaluation/v1/          # engineering cases, expectations, and baseline
 tests/                       # pipeline, extraction, demo, and UI checks
 docs/DESIGN.md               # current UI conventions
 ```
 
-## Dataset and next steps
+## Dataset and provenance
 
-`data/sandbox/` contains a small set of Singapore authorities as JSON. Entries are **paraphrased or placeholder summaries with placeholder URLs**, not authoritative legal text. Search links open external portals for manual follow-up; Quelaw does not fetch those portals to verify results.
+`data/sandbox/` contains nine validated JSON records. All have `coverage="summary"`: five case paraphrases and four synthetic fixtures. No record contains complete official text.
 
-The next milestone focuses on source provenance, evaluation, and release readiness. The [roadmap](ROADMAP.md) separates current features from planned work. Live LawNet integration is a possible later path, not a current dependency.
+| Record | Text kind |
+|---|---|
+| Spandeck Engineering v Defence Science & Technology Agency, `[2007] SGCA 37` | Paraphrase |
+| RDC Concrete v Sato Kogyo, `[2007] SGCA 39` | Paraphrase |
+| ACB v Thomson Medical, `[2017] SGCA 20` | Paraphrase |
+| Public Prosecutor v Lam Leng Hung, `[2018] SGCA 7` | Paraphrase |
+| BOM v BOK, `[2018] SGCA 83` | Paraphrase |
+| ABC v DEF, `[2023] SGHC 100` | Synthetic case fixture |
+| Civil Law Act, section 14 | Synthetic provision placeholder |
+| Penal Code, section 300 | Synthetic provision placeholder |
+| Rules of Court 2021, Order 9 Rule 6 | Synthetic provision placeholder |
+
+For every record, `official_url`, `retrieved_on`, `version_label`, and `reuse_basis` are null, and `reuse_status="unverified"`. Legacy dates and placeholder `source_url` strings do not establish retrieval, source currency, or reuse permission. The recorded limitations explain this. Search links open external portals for manual follow-up; Quelaw does not fetch those portals to verify results.
+
+Run `uv run --locked python scripts/check_dataset.py` to validate the inventory and print its SHA-256 fingerprint. Changing validated source text or provenance changes that fingerprint; reordering JSON object keys does not. The candidate fingerprint is recorded in the [changelog](CHANGELOG.md). Live LawNet integration and broader official-source coverage remain [later work](ROADMAP.md).
+
+## Offline evaluation
+
+The versioned [evaluation corpus](data/evaluation/v1/README.md) contains at least 30 independently specified engineering fixtures. Cases cover extraction spans and parsed fields, authority outcomes, quotation limits, repeated references, correction safety, and malformed mocked Claude responses. Legal expectations carry `reviewer_status="legal_domain_review_pending"`; passing the baseline measures engineering consistency, not legal accuracy.
+
+After installing dependencies, run:
+
+```bash
+uv run --locked python scripts/evaluate.py --dataset data/sandbox --cases data/evaluation/v1/cases.jsonl --baseline data/evaluation/v1/baseline.json
+```
+
+The evaluation command runs without network or API access and needs no key, embedding download, or vector index. Its JSON summary separates extraction precision/recall and span accuracy from verification confusion counts and quotation outcomes. Material expectation differences cause a nonzero exit; an aggregate improvement cannot conceal a changed false verification. Baseline changes require review of the differing cases.
 
 ## Tests and contributions
 
 ```bash
 uv sync --locked
+uv run --locked python scripts/check_dataset.py
+uv run --locked python scripts/evaluate.py --dataset data/sandbox --cases data/evaluation/v1/cases.jsonl --baseline data/evaluation/v1/baseline.json
 uv run --locked python -m pytest
 uv run --locked python -m compileall -q app.py quelaw scripts
+uv run --locked ruff check --select F821 app.py quelaw scripts tests
 ```
 
-[CI](.github/workflows/ci.yml) installs the locked dependencies and runs checks including the deterministic scenarios and Streamlit AppTest coverage without Claude credentials. See [Contributing](CONTRIBUTING.md) for the development workflow and [UI design conventions](docs/DESIGN.md) for changes to the interface.
+[CI](.github/workflows/ci.yml) installs locked runtime and development dependencies, validates the dataset, runs offline evaluation, tests, demo checks, and the Ruff undefined-name check, and rejects requirements export drift. It runs without Claude credentials. See [Contributing](CONTRIBUTING.md) for verification and release demonstration steps and [UI design conventions](docs/DESIGN.md) for interface changes.
 
 ## References
 

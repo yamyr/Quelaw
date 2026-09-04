@@ -7,5 +7,19 @@
   "date": "2018-02-01",
   "source_url": "https://www.elitigation.sg/ (placeholder — proof-of-concept sandbox)",
   "status": "current_or_unknown",
-  "text": "Proof-of-concept sandbox summary (paraphrased from public information; not authoritative text). The Singapore Court of Appeal considered the construction of the criminal breach of trust provisions of the Penal Code, in particular the meaning of an agent within the aggravated offence, in the context of charges arising from the use of church funds. Public Prosecutor v Lam Leng Hung is a notable Singapore authority on statutory interpretation in criminal law."
+  "text": "Proof-of-concept sandbox summary (paraphrased from public information; not authoritative text). The Singapore Court of Appeal considered the construction of the criminal breach of trust provisions of the Penal Code, in particular the meaning of an agent within the aggravated offence, in the context of charges arising from the use of church funds. Public Prosecutor v Lam Leng Hung is a notable Singapore authority on statutory interpretation in criminal law.",
+  "provenance": {
+    "text_kind": "paraphrase",
+    "coverage": "summary",
+    "official_url": null,
+    "retrieved_on": null,
+    "version_label": null,
+    "reuse_status": "unverified",
+    "reuse_basis": null,
+    "limitations": [
+      "Legacy source_url is a placeholder, not a verified official source link.",
+      "No source retrieval date, source version, or reuse permission has been verified.",
+      "Sandbox paraphrase; the original judgment text is not available and quotations cannot be authenticated."
+    ]
+  }
 }

@@ -7,7 +7,10 @@ or that it needs manual review.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Optional
+from typing import Literal, Optional
+
+from .evidence_types import QuoteEvidence
+from .provenance import Provenance
 
 # --- Citation types -------------------------------------------------------
 CASE = "case"
@@ -53,6 +56,7 @@ class Citation:
     end_char: int = -1
     quote_text: Optional[str] = None
     context_sentence: Optional[str] = None
+    quote_ambiguous: bool = False
 
     def query_text(self) -> str:
         """Text used to query the vector store."""
@@ -67,7 +71,7 @@ class Citation:
         return joined or self.raw_text
 
     def key(self) -> str:
-        """De-duplication key."""
+        """Authority identity, shared by separate occurrences in a draft."""
         if self.type == CASE and self.citation:
             return " ".join(self.citation.lower().split())
         if self.type == STATUTE and self.act and self.section:
@@ -77,6 +81,21 @@ class Citation:
             return f"rule_o{self.order.lower()}_r{self.rule.lower()}"
         basis = self.citation or self.raw_text
         return " ".join(basis.lower().split())
+
+    def occurrence_key(self) -> tuple[int, int]:
+        """Occurrence identity within the draft used to validate these offsets."""
+        return self.start_char, self.end_char
+
+
+@dataclass(frozen=True, slots=True)
+class CorrectionProposal:
+    """A reviewed replacement bound to one exact span and draft fingerprint."""
+
+    draft_sha256: str
+    start_char: int
+    end_char: int
+    expected_text: str
+    replacement: str
 
 
 @dataclass
@@ -92,25 +111,47 @@ class VerificationResult:
     manual_review_required: bool = True
     suggested_fix: Optional[str] = None
     quote_text: Optional[str] = None
-    quote_status: Optional[str] = None  # "verified", "not_found", None
+    quote_evidence: QuoteEvidence | None = None
     external_search_url: Optional[str] = None
     start_char: int = -1
     end_char: int = -1
+    source_id: str | None = None
+    source_provenance: Provenance | None = None
+    verifier: Literal["heuristic", "claude"] = "heuristic"
+    fallback_reason: str | None = None
+    occurrence_id: str = ""
+    authority_key: str = ""
+    context_sentence: str | None = None
+    review_reasons: tuple[str, ...] = ()
+    correction: CorrectionProposal | None = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        result = asdict(self)
+        result["source_provenance"] = (
+            self.source_provenance.model_dump(mode="json") if self.source_provenance else None
+        )
+        result["review_reasons"] = list(self.review_reasons)
+        return result
 
 
 @dataclass
 class Report:
-    summary: dict = field(default_factory=dict)
-    results: list = field(default_factory=list)
+    schema_version: int = 2
+    draft_sha256: str = ""
+    dataset_fingerprint: str = ""
+    verifier: dict[str, str | None] = field(default_factory=dict)
+    summary: dict[str, int] = field(default_factory=dict)
+    results: list[VerificationResult] = field(default_factory=list)
     risk_level: str = "Unknown"
     risk_detail: str = ""
     disclaimer: str = ""
 
     def to_dict(self) -> dict:
         return {
+            "schema_version": self.schema_version,
+            "draft_sha256": self.draft_sha256,
+            "dataset_fingerprint": self.dataset_fingerprint,
+            "verifier": self.verifier,
             "summary": self.summary,
             "risk_level": self.risk_level,
             "risk_detail": self.risk_detail,
