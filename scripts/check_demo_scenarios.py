@@ -20,12 +20,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from quelaw import demo  # noqa: E402
 from quelaw.pipeline import check_draft  # noqa: E402
-from quelaw.schema import STATUS_LABEL  # noqa: E402
+from quelaw.schema import STATUS_LABEL, VerificationResult  # noqa: E402
 
 
-def _find(results, needle):
+def _find(results: list[VerificationResult], needle: str) -> VerificationResult | None:
+    normalized_needle = " ".join(needle.lower().split())
     for r in results:
-        if needle.lower() in r.citation.lower():
+        if normalized_needle in " ".join(r.citation.lower().split()):
             return r
     return None
 

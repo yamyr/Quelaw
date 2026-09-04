@@ -80,28 +80,29 @@ def test_suggested_fix_generated_for_uncertain_citation():
     assert "[2017] SGCA 20" in r.suggested_fix
 
 
-def test_quote_verification_verified_and_not_found():
-    # Case 1: Real quote from Spandeck summary
+def test_paraphrased_quote_evidence_is_limited_for_present_and_absent_text():
+    # Given a phrase present in the paraphrased Spandeck summary.
     draft_real_quote = (
         'In Spandeck Engineering (S) Pte Ltd v Defence Science & Technology Agency [2007] SGCA 37, '
         'the court noted the "threshold requirement of factual foreseeability" applies.'
     )
     rep1, _ = check_draft(draft_real_quote, use_llm=False)
     assert len(rep1.results) == 1
-    assert rep1.results[0].quote_status == "verified"
+    assert rep1.results[0].quote_evidence.status == "evidence_limited"
 
-    # Case 2: Fabricated quote
+    # Given a phrase absent from the same incomplete summary.
     draft_fake_quote = (
         'In Spandeck Engineering (S) Pte Ltd v Defence Science & Technology Agency [2007] SGCA 37, '
         'the court held that "strict liability applies automatically to maritime contracts".'
     )
     rep2, _ = check_draft(draft_fake_quote, use_llm=False)
     assert len(rep2.results) == 1
-    assert rep2.results[0].quote_status == "not_found"
+    assert rep2.results[0].quote_evidence.status == "evidence_limited"
 
 
 def test_annotator_html_rendering_and_apply_fix():
-    from quelaw.annotator import annotate_draft_html, apply_all_fixes, apply_fix
+    from quelaw.annotator import annotate_draft_html
+    from quelaw.corrections import apply_corrections
 
     draft = "See ACB v Thomson Medical Pte Ltd [2016] SGCA 20."
     report, _ = check_draft(draft, use_llm=False)
@@ -110,7 +111,7 @@ def test_annotator_html_rendering_and_apply_fix():
     assert "<mark" in html_out
     assert "Uncertain match" in html_out
 
-    fixed_draft = apply_all_fixes(draft, report.results)
+    fixed_draft = apply_corrections(draft, [result.correction for result in report.results if result.correction])
     assert "[2017] SGCA 20" in fixed_draft
 
 

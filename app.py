@@ -11,34 +11,15 @@ deterministic and needs no API key, no internet, and no pre-built index.
 """
 from __future__ import annotations
 
-import html
-
 import streamlit as st
 
 from quelaw import config, demo, vectorstore
 from quelaw.pipeline import check_draft
-from quelaw.report import report_to_markdown
-from quelaw.sandbox import documents_cached
-from quelaw.schema import (
-    DISCLAIMER,
-    NOT_FOUND,
-    REQUIRES_REVIEW,
-    STATUS_ICON,
-    STATUS_LABEL,
-    UNCERTAIN,
-    VERIFIED,
-)
+from quelaw.provenance import DatasetValidationError, load_dataset
+from quelaw.review_ui import render_report
+from quelaw.schema import DISCLAIMER
 
 st.set_page_config(page_title="Quelaw — SG Legal Citation Checker", page_icon="⚖️", layout="wide")
-
-_RISK_COLOR = {"High": "#c0392b", "Medium": "#d68910", "Low": "#1e8449", "Unknown": "#566573"}
-_STATUS_COLOR = {
-    VERIFIED: "#1e8449",
-    NOT_FOUND: "#c0392b",
-    UNCERTAIN: "#d68910",
-    REQUIRES_REVIEW: "#2471a3",
-}
-
 
 def _load_demo() -> str:
     path = config.DEMO_DIR / "golden_path.txt"
@@ -62,126 +43,11 @@ def _read_upload(uploaded) -> str:
     return ""
 
 
-from quelaw.annotator import annotate_draft_html, apply_all_fixes, apply_fix
-
-
-def _set_draft(draft: str) -> None:
-    st.session_state["draft"] = draft
-
-
-def _render_report(report, current_draft: str = "") -> None:
-    """Render a verification report: summary, annotated draft, per-citation cards, export."""
-    st.subheader("Summary")
-    risk_color = _RISK_COLOR.get(report.risk_level, "#566573")
-    st.markdown(
-        f"<div style='padding:0.75rem 1rem;border-radius:8px;background:{risk_color};"
-        f"color:white;font-weight:600;'>Overall risk: {report.risk_level} — "
-        f"{report.risk_detail}</div>",
-        unsafe_allow_html=True,
-    )
-    s = report.summary
-    m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Total", s["total"])
-    m2.metric("Verified", s["verified"])
-    m3.metric("Not found", s["not_found"])
-    m4.metric("Uncertain", s["uncertain"])
-    m5.metric("Needs review", s["requires_review"])
-
-    st.caption(
-        "Quelaw never labels a case "
-        '"fake" or "good law". It shows what it could and could not match in the '
-        "trusted dataset and points you to the source so you can decide."
-    )
-
-    tab_annotated, tab_cards = st.tabs(["📝 Annotated Draft", "📋 Citation Analysis"])
-
-    with tab_annotated:
-        fixable = [r for r in report.results if r.suggested_fix]
-        if fixable:
-            st.info(f"💡 Found {len(fixable)} suggested correction(s) for transcription mismatches.")
-            st.button(
-                "✨ Apply All Fixes to Draft", key="apply_all_fixes_btn", type="primary",
-                on_click=_set_draft, args=(apply_all_fixes(current_draft, report.results),),
-            )
-
-        st.markdown(annotate_draft_html(current_draft, report.results), unsafe_allow_html=True)
-
-    with tab_cards:
-        if not report.results:
-            st.info("No legal authorities were detected in the draft.")
-        for idx, r in enumerate(report.results):
-            color = _STATUS_COLOR.get(r.status, "#566573")
-            icon = STATUS_ICON.get(r.status, "•")
-            label = STATUS_LABEL.get(r.status, r.status)
-            with st.container(border=True):
-                head, badge = st.columns([3, 2])
-                head.markdown(
-                    f"**{html.escape(r.citation)}**  \n<small>type: `{html.escape(r.type)}`</small>", unsafe_allow_html=True
-                )
-                badge.markdown(
-                    f"<div style='text-align:right;color:{color};font-weight:600;'>"
-                    f"{icon} {label}<br><small>confidence {r.confidence:.0%}</small></div>",
-                    unsafe_allow_html=True,
-                )
-                st.write(r.explanation)
-
-                if r.quote_text:
-                    if r.quote_status == "verified":
-                        st.info(f'💬 Nearby quotation matches sandbox text: *"{r.quote_text}"*')
-                    elif r.quote_status == "not_found":
-                        st.warning(f'⚠️ Nearby quotation was not matched in available sandbox text: *"{r.quote_text}"*')
-                    st.caption("Experimental text comparison only. Sandbox text may be paraphrased or incomplete; verify quotations against the official source.")
-
-                if r.source_title:
-                    st.caption(f"Matched source: {r.source_title}")
-                if r.source_excerpt:
-                    st.markdown(
-                        f"<div style='font-size:0.85rem;color:#444;border-left:3px solid "
-                        f"{color};padding-left:0.6rem;margin-bottom:0.5rem;'>{html.escape(r.source_excerpt)}</div>",
-                        unsafe_allow_html=True,
-                    )
-                if r.source_url:
-                    st.caption(r.source_url)
-
-                action_col1, action_col2 = st.columns([1, 1])
-                with action_col1:
-                    if r.suggested_fix:
-                        st.button(
-                            f"💡 Quick Fix: Replace with '{r.suggested_fix}'", key=f"fix_btn_{idx}",
-                            on_click=_set_draft,
-                            args=(apply_fix(current_draft, r.citation, r.suggested_fix),),
-                        )
-                with action_col2:
-                    if r.external_search_url:
-                        portal_name = "eLitigation" if r.type == "case" else "Singapore Statutes Online"
-                        st.link_button(f"🔎 Search on {portal_name}", r.external_search_url, width="stretch")
-
-                if r.status == NOT_FOUND:
-                    st.caption(
-                        "⚖️ Not in the dataset — verify against official sources "
-                        "(eLitigation / Singapore Statutes Online) before relying on it."
-                    )
-                elif r.status in (UNCERTAIN, REQUIRES_REVIEW):
-                    st.caption("⚖️ Quelaw can't fully confirm this — read the source above and decide.")
-
-    st.divider()
-    d1, d2 = st.columns(2)
-    with d1:
-        st.download_button(
-            "⬇️ Download report (Markdown)",
-            data=report_to_markdown(report),
-            file_name="quelaw_report.md",
-            mime="text/markdown",
-            width="stretch",
-        )
-    with d2:
-        st.download_button(
-            "⬇️ Download report (JSON)",
-            data=__import__("json").dumps(report.to_dict(), indent=2),
-            file_name="quelaw_report.json",
-            mime="application/json",
-            width="stretch",
-        )
+try:
+    dataset = load_dataset(config.SANDBOX_DIR)
+except DatasetValidationError as error:
+    st.error(f"Sandbox validation failed: {error}")
+    st.stop()
 
 
 # --- Sidebar --------------------------------------------------------------
@@ -196,10 +62,14 @@ with st.sidebar:
         "Bypasses Claude so the result is identical every time.",
     )
 
+    index_state = vectorstore.index_status(dataset)
     index_count = vectorstore.count()
-    sandbox_docs = len(documents_cached())
+    sandbox_docs = len(dataset.records)
     st.metric("Sandbox documents", sandbox_docs)
     st.metric("Indexed chunks", index_count)
+
+    if index_state == "stale":
+        st.warning("Index rebuild required: the saved index does not match the current dataset. Offline checks remain available.")
 
     if demo_mode:
         st.success("Demo mode ON — offline heuristic, deterministic output")
@@ -210,7 +80,7 @@ with st.sidebar:
 
     if st.button("🔁 Rebuild index", width="stretch"):
         with st.spinner("Ingesting sandbox… (first run downloads the embedding model)"):
-            n = vectorstore.ingest(reset=True)
+            n = vectorstore.ingest(reset=True, dataset=dataset)
         st.success(f"Indexed {n} chunks.")
         st.rerun()
 
@@ -253,7 +123,7 @@ if demo_mode:
     with st.expander("🗣️ Talking point (what to say while it runs)"):
         st.write(scenario.talking_point)
 else:
-    if vectorstore.count() == 0:
+    if index_state == "missing":
         st.warning(
             "The vector index is empty. Click **Rebuild index** in the sidebar (or run "
             "`uv run python scripts/ingest.py`). The heuristic verifier still works without it."
@@ -294,12 +164,21 @@ if check:
     # normal mode lets config decide (use_llm=None).
     use_llm = False if demo_mode else None
     with st.spinner(spinner_msg):
-        report, _ = check_draft(draft, use_llm=use_llm)
+        report, _ = check_draft(draft, use_llm=use_llm, dataset=dataset)
         st.session_state["report"] = report
         st.session_state["reported_draft"] = draft
 
-if "report" in st.session_state and st.session_state.get("reported_draft") == draft:
-    _render_report(st.session_state["report"], current_draft=draft)
+if "correction_notice" in st.session_state:
+    st.info(st.session_state.pop("correction_notice"))
+
+if "report" in st.session_state:
+    saved_report = st.session_state["report"]
+    if st.session_state.get("reported_draft") != draft:
+        st.info("Draft changed. Check it again to refresh the report.")
+    elif saved_report.dataset_fingerprint != dataset.fingerprint:
+        st.warning("Dataset changed. Check the draft again against the current sources.")
+    else:
+        render_report(saved_report, current_draft=draft)
 
 st.divider()
 st.caption(DISCLAIMER)

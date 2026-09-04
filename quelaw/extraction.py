@@ -8,8 +8,10 @@ reproducible even fully offline.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from typing import List
 
+from .quote_context import attach_quote_context
 from .schema import CASE, RULE, STATUTE, Citation
 
 # A Singapore neutral citation: [YEAR] COURT NUMBER, e.g. [2007] SGCA 37,
@@ -53,32 +55,6 @@ def _clean(text: str) -> str:
     return " ".join(text.split()).strip(" ,.;")
 
 
-def _extract_context_and_quote(text: str, start: int, end: int) -> tuple[str, str | None]:
-    """Extract the surrounding sentence and any enclosed quotation near the citation."""
-    left = 0
-    for i in range(start - 1, -1, -1):
-        if text[i] == "\n":
-            left = i + 1
-            break
-        if text[i] in ".!?" and (i + 1 < len(text) and text[i + 1].isspace()):
-            left = i + 1
-            break
-
-    right = len(text)
-    for i in range(end, len(text)):
-        if text[i] == "\n":
-            right = i
-            break
-        if text[i] in ".!?" and (i + 1 == len(text) or text[i + 1].isspace()):
-            right = i + 1
-            break
-
-    sentence = text[left:right].strip()
-    quote_match = re.search(r"[\"“]([^\"”]{4,250})[\"”]", sentence)
-    quote = quote_match.group(1).strip() if quote_match else None
-    return sentence, quote
-
-
 def extract_with_regex(text: str) -> List[Citation]:
     citations: List[Citation] = []
     consumed_spans: list[tuple[int, int]] = []
@@ -86,17 +62,14 @@ def extract_with_regex(text: str) -> List[Citation]:
     # 1. Full case references (name + neutral citation).
     for m in _CASE_FULL.finditer(text):
         start, end = m.span()
-        ctx, quote = _extract_context_and_quote(text, start, end)
         citations.append(
             Citation(
-                raw_text=_clean(m.group(0)),
+                raw_text=m.group(0),
                 type=CASE,
                 case_name=_clean(m.group("name")),
                 citation=_clean(m.group("cite")),
                 start_char=start,
                 end_char=end,
-                quote_text=quote,
-                context_sentence=ctx,
             )
         )
         consumed_spans.append(m.span("cite"))
@@ -106,61 +79,75 @@ def extract_with_regex(text: str) -> List[Citation]:
         if any(s <= m.start() and m.end() <= e for s, e in consumed_spans):
             continue
         start, end = m.span()
-        ctx, quote = _extract_context_and_quote(text, start, end)
         citations.append(
             Citation(
-                raw_text=_clean(m.group(0)),
+                raw_text=m.group(0),
                 type=CASE,
                 citation=_clean(m.group(0)),
                 start_char=start,
                 end_char=end,
-                quote_text=quote,
-                context_sentence=ctx,
             )
         )
 
     # 3. Statutory references.
     for m in _STATUTE_RE.finditer(text):
         start, end = m.span()
-        ctx, quote = _extract_context_and_quote(text, start, end)
         citations.append(
             Citation(
-                raw_text=_clean(m.group(0)),
+                raw_text=m.group(0),
                 type=STATUTE,
                 act=_clean(m.group("act")),
-                section=m.group("section"),
+                section=re.sub(r"\s+", "", m.group("section")),
                 start_char=start,
                 end_char=end,
-                quote_text=quote,
-                context_sentence=ctx,
             )
         )
 
     # 4. Rules of Court.
     for m in _RULE_RE.finditer(text):
         start, end = m.span()
-        ctx, quote = _extract_context_and_quote(text, start, end)
         citations.append(
             Citation(
-                raw_text=_clean(m.group(0)),
+                raw_text=m.group(0),
                 type=RULE,
                 order=m.group("order"),
                 rule=m.group("rule"),
                 start_char=start,
                 end_char=end,
-                quote_text=quote,
-                context_sentence=ctx,
             )
         )
 
-    return _dedupe(citations)
+    return attach_quote_context(text, _dedupe(citations))
 
 
 def _dedupe(citations: List[Citation]) -> List[Citation]:
-    seen: dict[str, Citation] = {}
-    for c in citations:
-        seen.setdefault(c.key(), c)
-    return list(seen.values())
+    kept: list[Citation] = []
+    for citation in sorted(citations, key=lambda c: (c.start_char, -c.end_char)):
+        if not kept or citation.start_char >= kept[-1].end_char:
+            kept.append(citation)
+    return kept
+
+
+def _anchor_extras(text: str, extras: list[Citation], existing: list[Citation]) -> list[Citation]:
+    """Resolve model excerpts to unused draft spans; model offsets are only hints."""
+    claimed = [citation.occurrence_key() for citation in existing]
+    anchored: list[Citation] = []
+    for citation in extras:
+        if not citation.raw_text.strip():
+            continue
+        spans: list[tuple[int, int]] = []
+        start, end = citation.occurrence_key()
+        if 0 <= start < end <= len(text) and text[start:end] == citation.raw_text:
+            spans.append((start, end))
+        pattern = r"\s+".join(re.escape(part) for part in citation.raw_text.split())
+        spans.extend(match.span() for match in re.finditer(pattern, text))
+        for start, end in spans:
+            if any(start < other_end and other_start < end for other_start, other_end in claimed):
+                continue
+            anchored.append(replace(citation, raw_text=text[start:end], start_char=start, end_char=end))
+            claimed.append((start, end))
+            break
+    return anchored
 
 
 def extract_citations(text: str, use_llm: bool | None = None) -> List[Citation]:
@@ -179,9 +166,9 @@ def extract_citations(text: str, use_llm: bool | None = None) -> List[Citation]:
             from . import llm
 
             extra = llm.extract_citations(text)
-            citations = _dedupe(citations + extra)
+            citations = _dedupe(citations + _anchor_extras(text, extra, citations))
         except Exception:
             # Never let an LLM/API hiccup break extraction — regex stands alone.
             pass
 
-    return citations
+    return attach_quote_context(text, citations)

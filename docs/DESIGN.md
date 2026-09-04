@@ -93,3 +93,40 @@ uncertain and manual-review results ask users to read the source and decide.
 The footer states that Quelaw supports verification, does not provide legal
 advice or replace professional legal judgment, and requires manual review of
 flagged items against official legal sources before use.
+
+## 0.2 evidence review workspace
+
+The 0.2 screen preserves Streamlit's native controls and theme. It adds no
+custom typography, palette, motion, JavaScript framework, or external assets.
+The primary user is a reviewer comparing a draft occurrence with limited local
+evidence; the same flow must remain usable by keyboard and on a narrow phone.
+
+The summary separates **Occurrences** from **Distinct authorities**, with the
+four existing authority counts beside them. A native risk notice states the
+scope of available evidence. A separate count identifies occurrences needing
+review, including quotations and fallback notices.
+
+The **Evidence review** tab contains a labelled occurrence selectbox followed
+by two native columns: annotated draft and a bordered evidence panel. On narrow
+screens the columns stack in reading order. The selected occurrence shows its
+exact span, context, authority status, source ID, fidelity and coverage,
+limitations, official provenance (including explicit unknowns), quotation
+assessment, review reasons, and correction preview. Long draft/source text
+wraps; fingerprints use native code blocks. **All findings** provides a compact
+status inventory without repeating correction actions.
+
+A correction callback validates the saved proposal against the current session
+draft at click time. Failure shows a review message and leaves the draft intact.
+Successful application hides the old report and asks for a new check. All-fixes
+shows the number of proposals and applies the validated batch atomically.
+Changing the dataset fingerprint also hides the report. A stale index shows a
+rebuild notice; deterministic offline checks remain available.
+
+The evidence panel, status notice, correction preview and export controls are
+reusable native primitives implemented in `quelaw/review_ui.py`. They use visible
+labels, ordinary focus behavior and no decorative animation. Source text uses
+plain text rendering. Existing escaped draft annotation is retained; its fixed
+light palette is unchanged. Browser evidence will cover desktop, tablet and
+390 px layouts, selector keyboard use, report invalidation, one-occurrence
+correction and both downloads. This is a focused workflow validation, not a
+claim of a full Streamlit framework accessibility or performance audit.
