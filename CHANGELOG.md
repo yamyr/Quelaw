@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — development workflow (2026-09-06)
+
+- Add shared Make targets for setup, offline app development, focused tests, fast checks, the complete CI gate, dependency upgrades and export verification. Cancel obsolete CI runs on the same branch.
+- Load fresh source evidence for every default pipeline/verification call, preserving explicit dataset snapshots for batches. Invalid source edits fail on the next check instead of reusing cached evidence.
+- Force the golden-path smoke command offline even when Claude credentials are configured.
+- Upgrade Anthropic 1.3.0 → 1.4.0, AnyIO 4.15.0 → 4.15.1, googleapis-common-protos 1.75.2 → 1.75.3, and NumPy 2.5.2 → 2.5.3; regenerate the runtime export. The [Anthropic release notes](https://github.com/anthropics/anthropic-sdk-python/releases/tag/v1.4.0) describe the SDK changes. Other packages remain within their parent constraints.
+- Recheck the four ChromaDB advisory pages on 2026-09-06: all still list no patched version. ChromaDB remains 1.5.9 with the limitations documented below.
+
 ## 0.2.0 — untagged release candidate (2026-09-04)
 
 This candidate adds occurrence-specific evidence review and a repeatable engineering evaluation. It is not a published release. Independent review, green CI, and the [release demonstration](CONTRIBUTING.md#release-demonstration) are required before a `v0.2.0` tag; tagging and deployment require an explicit release instruction.

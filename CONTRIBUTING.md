@@ -7,43 +7,62 @@ Quelaw is a Python 3.14 Streamlit application. Keep contributions focused on rel
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run from the repository root:
 
 ```bash
-uv sync --locked
-uv run --locked streamlit run app.py
+make setup
+make dev-offline
 ```
+
+These shortcuts require GNU Make (included on typical macOS/Linux development setups). Run `make help` for the command list. On Windows without Make, use the underlying `uv` commands shown in the Makefile or run them through WSL. The portable app command remains `uv run --locked streamlit run app.py`.
 
 The project uses `.python-version` for Python selection, `pyproject.toml` for dependency declarations and the required uv version, and `uv.lock` for the resolved environment. Use a uv version within `tool.uv.required-version` (currently `>=0.12.7,<0.13`); CI and the canonical requirements export use uv `0.12.9`. The supported range also accommodates Dependabot's bundled uv updater. The development dependency group is included by default. Initial installation requires network access; demo verification requires no API key, vector index, or model download after setup.
 
 Use `.env.example` for optional Claude configuration. Keep `.env`, Streamlit secrets, `.venv/`, and the generated `chroma/` index out of version control. Use the supplied demo text in issue reports and UI screenshots instead of private legal drafts.
 
+## Daily development
+
+| Command | Purpose |
+|---|---|
+| `make dev-offline` | Start the app with Claude disabled, even when `.env` contains a key. |
+| `make dev` | Start the app with the normal optional Claude configuration. |
+| `make check-fast` | Run correctness lint, source validation, and the offline evaluation baseline. |
+| `make test TEST_ARGS="tests/test_extraction.py -x"` | Run one test file and stop on its first failure. |
+| `make test TEST_ARGS="--lf"` | Rerun the last failing tests. |
+| `make check` | Run the complete verification gate used in CI. |
+
+Pass Streamlit flags with `APP_ARGS`, for example `make dev-offline APP_ARGS="--server.port 8502"`. Stop the server with Ctrl-C. These commands use the committed environment without silently updating the lockfile.
+
+The public pipeline and verification functions load current source evidence at the beginning of each call. Editing a sandbox JSON file no longer requires a Python restart or manual cache reset. One pipeline call shares a single immutable dataset across all occurrences. For a batch that deliberately uses a fixed snapshot, call `load_dataset(...)` once and pass `dataset=...`; load it again when you want source edits to take effect. Invalid source edits raise `DatasetValidationError` on the next check. The optional index still requires an explicit rebuild after source changes.
+
 ## Verification before a pull request
 
 ```bash
-uv sync --locked
-uv pip check
-uv run --locked python scripts/check_dataset.py
-uv run --locked python scripts/evaluate.py --dataset data/sandbox --cases data/evaluation/v1/cases.jsonl --baseline data/evaluation/v1/baseline.json
-uv run --locked python -m pytest
-uv run --locked python -m compileall -q app.py quelaw scripts
-uv run --locked ruff check --select F821 app.py quelaw scripts tests
-uv run --locked python scripts/check_demo_scenarios.py
-uv run --locked python scripts/check_demo.py
+make setup
+make check
 ```
 
-Leave `ANTHROPIC_API_KEY` unset for the golden-path smoke run. The scenario checker forces `use_llm=False` independently of configuration. The evaluation command forbids network and API access and requires no vector index or embedding model after the locked dependencies are installed. CI validates the dataset, evaluates the committed baseline, runs full tests and demo checks, checks undefined names using the locked Ruff development dependency, and verifies requirements export drift.
+`make check` checks the lockfile and installed packages, compares the runtime export without rewriting it, compiles modules, runs correctness lint, validates sources, evaluates all 48 baseline cases, runs the entire test suite, and exercises both demo commands. It always runs all tests, even if `TEST_ARGS` is set for everyday development. CI runs these same targets and cancels obsolete runs for the same branch.
+
+Both demo commands force offline verification independently of Claude configuration. The test and evaluation targets also clear the API key for their process. The evaluation command forbids network and API access and requires no vector index or embedding model after installation. The Ruff rules live in `pyproject.toml` and cover syntax errors, invalid comparisons/control flow, and undefined names; this is a correctness gate, not a repository-wide formatting migration.
 
 For behavior changes, add a focused regression case at the affected boundary. Keep scenario expectations synchronized with `quelaw/demo.py` and `data/demo/test_memo_expected.md`. For UI changes, check the app in a browser as well as AppTest: native UI rendering and HTML annotations need visual inspection. Follow the existing [design conventions](docs/DESIGN.md).
 
 ## Dependency changes
 
-Edit dependencies through uv so declarations and the lockfile remain synchronized. Add a runtime dependency with `uv add PACKAGE` or a development tool with `uv add --dev PACKAGE`. For an intentional upgrade, use `uv lock --upgrade-package PACKAGE`, then sync and run the checks above.
+Edit dependencies through uv so declarations and the lockfile remain synchronized. Add a runtime dependency with `uv add PACKAGE` or a development tool with `uv add --dev PACKAGE`. For an intentional upgrade of all compatible dependencies:
+
+```bash
+make upgrade
+make check
+```
+
+Review the manifest, lock and export diff before committing. `make upgrade` resolves within declared constraints, synchronizes the environment, then regenerates the runtime export; it does not approve changed behavior or security findings. For a single package, use `uv lock --upgrade-package PACKAGE`, `make setup`, `make export`, then `make check`. Parent constraints can hold transitive packages below their newest published release; do not override those pins just to empty an outdated-package list. See uv's [upgrade rules](https://docs.astral.sh/uv/concepts/projects/sync/#upgrading-locked-package-versions).
 
 Regenerate the pip-compatible runtime export after any dependency change:
 
 ```bash
-uv export --locked --no-dev --no-hashes --no-emit-project --output-file requirements.txt
+make export
 ```
 
-Commit `pyproject.toml`, `uv.lock`, and the generated `requirements.txt` together when they change. Do not hand-edit the export or duplicate its version pins in documentation. Dependabot updates the uv manifest and lockfile weekly; regenerate the requirements export on each dependency PR before merging. CI rejects an export that differs from the lockfile. `requirements.txt` excludes development tools and supports consumers that install through pip. Community Cloud selects `uv.lock` when both files are present, according to its [dependency selection rules](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/app-dependencies).
+Commit `pyproject.toml`, `uv.lock`, and the generated `requirements.txt` together when they change. Do not hand-edit the export or duplicate its version pins in documentation. Dependabot updates the uv manifest and lockfile weekly; regenerate the requirements export on each dependency PR before merging. `make export-check` and CI reject dependency or annotation drift without changing the working file; only uv's two generated command-header lines are ignored. `requirements.txt` excludes development tools and supports consumers that install through pip. Community Cloud selects `uv.lock` when both files are present, according to its [dependency selection rules](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/app-dependencies).
 
 `uv lock --check` verifies that declarations and the lockfile agree. The `--locked` flag makes normal sync and run commands fail on an outdated lockfile instead of silently changing it; see the [uv documentation](https://docs.astral.sh/uv/concepts/projects/sync/).
 

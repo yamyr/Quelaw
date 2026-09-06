@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,33 +29,7 @@ jobs:
           enable-cache: true
 
       - name: Install locked runtime and test dependencies
-        run: uv sync --locked
+        run: make setup
 
-      - name: Check deployment requirements match the lockfile
-        run: |
-          uv export --locked --no-dev --no-hashes --no-emit-project --output-file requirements.txt
-          git diff --exit-code -- requirements.txt
-
-      - name: Check installed dependencies
-        run: uv pip check
-
-      - name: Byte-compile all modules
-        run: uv run --locked python -m compileall -q app.py quelaw scripts
-
-      - name: Check undefined names
-        run: uv run --locked ruff check --select F821 app.py quelaw scripts tests
-
-      - name: Validate source inventory
-        run: uv run --locked python scripts/check_dataset.py
-
-      - name: Evaluate offline evidence baseline
-        run: >-
-          uv run --locked python scripts/evaluate.py
-          --dataset data/sandbox --cases data/evaluation/v1/cases.jsonl
-          --baseline data/evaluation/v1/baseline.json
-
-      - name: Run pipeline and Streamlit tests
-        run: uv run --locked pytest -q
-
-      - name: Run offline demo scenarios
-        run: uv run --locked python scripts/check_demo_scenarios.py
+      - name: Run shared development checks
+        run: make check

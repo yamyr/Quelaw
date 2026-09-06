@@ -51,6 +51,8 @@ uv run --locked streamlit run app.py
 
 The first setup requires internet access to obtain dependencies and, if needed, Python. `uv sync --locked` creates `.venv` from the committed lockfile and includes the development tools. No manual activation is needed when using `uv run`.
 
+For day-to-day development on macOS/Linux, use `make setup`, then `make dev-offline`. Run `make check-fast` while iterating and `make check` before a pull request. `make upgrade` updates compatible packages and the runtime export. See the [development workflow](CONTRIBUTING.md#daily-development) for targeted tests, optional Claude mode, and portable commands.
+
 In the app, turn on **🎬 Demo mode**, choose a scenario, and click **▶️ Run scenario**. Demo verification runs offline after setup, with no API key, embedding download, or pre-built index. The draft remains editable.
 
 For a free-text example, click **📄 Load demo draft**, then **🔍 Check Draft**. This memo includes `Spandeck … [2007] SGCA 37`, the planted example `Tan Ah Kow v Singapore Airlines [2025] SGHC 999`, a statute, and a rule.
@@ -127,7 +129,8 @@ pyproject.toml                # application metadata and dependency declarations
 uv.lock                       # resolved development and runtime dependencies
 requirements.txt              # generated runtime export for pip consumers
 scripts/ingest.py             # build the ChromaDB vector store
-scripts/check_demo.py         # golden-path smoke run
+Makefile                     # shared setup, development and CI commands
+scripts/check_demo.py         # always-offline golden-path smoke run
 scripts/check_demo_scenarios.py # deterministic scenario checks
 scripts/check_dataset.py      # validate source provenance and print its fingerprint
 scripts/evaluate.py           # offline regression evaluation and baseline comparison
@@ -185,15 +188,13 @@ The evaluation command runs without network or API access and needs no key, embe
 ## Tests and contributions
 
 ```bash
-uv sync --locked
-uv run --locked python scripts/check_dataset.py
-uv run --locked python scripts/evaluate.py --dataset data/sandbox --cases data/evaluation/v1/cases.jsonl --baseline data/evaluation/v1/baseline.json
-uv run --locked python -m pytest
-uv run --locked python -m compileall -q app.py quelaw scripts
-uv run --locked ruff check --select F821 app.py quelaw scripts tests
+make setup
+make check
 ```
 
-[CI](.github/workflows/ci.yml) installs locked runtime and development dependencies, validates the dataset, runs offline evaluation, tests, demo checks, and the Ruff undefined-name check, and rejects requirements export drift. It runs without Claude credentials. See [Contributing](CONTRIBUTING.md) for verification and release demonstration steps and [UI design conventions](docs/DESIGN.md) for interface changes.
+For faster feedback, use `make check-fast` or `make test TEST_ARGS="tests/test_extraction.py -x"`. The [Makefile](Makefile) lists the equivalent `uv` commands for environments without Make.
+
+[CI](.github/workflows/ci.yml) uses the same full check target: locked dependencies, source validation, offline evaluation, tests, both demo commands, correctness lint, and runtime export drift. See [Contributing](CONTRIBUTING.md) for the development workflow and release demonstration, and [UI design conventions](docs/DESIGN.md) for interface changes.
 
 ## References
 
