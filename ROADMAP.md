@@ -40,4 +40,4 @@ The [release procedure](CONTRIBUTING.md#release-demonstration) defines the concr
 - Investigate version, amendment, and subsequent-treatment evidence before making any claim about current legal status or overturned rulings.
 - Evaluate a maintained hosted service after source quality, dependency security, and deployment behavior are established.
 
-External search buttons provide manual follow-up links. They do not crawl official portals. The repository documents demo hosting options but does not advertise an existing hosted service; no tag or deployment is created by this milestone.
+External search buttons provide manual follow-up links. They do not crawl official portals. A persistent [test deployment](https://quelaw-dev.streamlit.app/) now runs the `codex/development-workflow-refresh` branch on Streamlit Community Cloud with Python 3.14 and offline verification. It is a development preview; release tagging remains a separate step.

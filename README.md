@@ -5,6 +5,7 @@
 &nbsp;[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
 > **Repository:** [github.com/yamyr/Quelaw](https://github.com/yamyr/Quelaw)
+> **Test app:** [quelaw-dev.streamlit.app](https://quelaw-dev.streamlit.app/) · offline verification · development branch
 
 Quelaw checks whether legal authorities cited in an AI-generated draft match a small, controlled Singapore legal dataset called **Micro-LawNet**. Paste a draft or upload a `.txt` or `.docx` file to review its cases, statutes, and rules.
 
@@ -108,7 +109,7 @@ The scenario checker explicitly forces the offline heuristic. The golden-path sc
 
 The verifier can run offline after dependencies are installed. Hosting, tunnels, and viewers connecting to a hosted app still require network access.
 
-1. **A hosted link — Streamlit Community Cloud.** Follow the [deployment guide](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app), choose repository `yamyr/Quelaw`, branch `main`, and entrypoint `app.py`, and select Python 3.14 in Advanced settings (the service default may differ). Leave `ANTHROPIC_API_KEY` unset and use demo mode. Community Cloud prioritizes `uv.lock` over `requirements.txt`; the generated requirements file remains available for pip-based deployment workflows. See its [dependency selection rules](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/app-dependencies). This repository provides deployment instructions, not an existing hosted demo URL.
+1. **A hosted link — Streamlit Community Cloud.** Follow the [deployment guide](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app), choose repository `yamyr/Quelaw`, branch `main`, and entrypoint `app.py`, and select Python 3.14 in Advanced settings (the service default may differ). Leave `ANTHROPIC_API_KEY` unset and use demo mode. Community Cloud prioritizes `uv.lock` over `requirements.txt`; the generated requirements file remains available for pip-based deployment workflows. See its [dependency selection rules](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/app-dependencies). The persistent [test app](https://quelaw-dev.streamlit.app/) runs from `codex/development-workflow-refresh` with Python 3.14 and no Claude credentials. It updates when that branch changes; the existing `main` deployment is separate.
 
 2. **A temporary link during a call — a tunnel.** With the app running locally, use an installed tunnel tool:
 
