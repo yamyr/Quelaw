@@ -103,7 +103,7 @@ uv run --locked python scripts/check_demo_scenarios.py
 uv run --locked python scripts/check_demo.py
 ```
 
-The scenario checker explicitly forces the offline heuristic. The golden-path script follows configuration, so leave `ANTHROPIC_API_KEY` unset for a heuristic run.
+Both commands explicitly force the offline heuristic, even when `ANTHROPIC_API_KEY` is configured.
 
 ## Share the offline demo
 
