@@ -8,13 +8,13 @@ from .evidence import adapt_verdict, attach_evidence
 from .evidence_types import EvidenceValidationError
 from .heuristic import verify_heuristic
 from .provenance import Dataset
-from .sandbox import dataset_cached
+from .sandbox import load_current_dataset
 from .schema import Citation, VerificationResult
 
 
 def verify(citation: Citation, use_llm: bool | None = None, *, dataset: Dataset | None = None) -> VerificationResult:
     """Check one occurrence; explicit offline mode never touches retrieval or Claude."""
-    available = dataset if dataset is not None else dataset_cached()
+    available = dataset if dataset is not None else load_current_dataset()
     want_llm = config.llm_enabled() if use_llm is None else use_llm
     fallback_reason = None
     if want_llm:
@@ -33,5 +33,5 @@ def verify(citation: Citation, use_llm: bool | None = None, *, dataset: Dataset 
 
 def verify_all(citations: Sequence[Citation], use_llm: bool | None = None, *, dataset: Dataset | None = None) -> list[VerificationResult]:
     """Check every occurrence against one immutable dataset snapshot."""
-    available = dataset if dataset is not None else dataset_cached()
+    available = dataset if dataset is not None else load_current_dataset()
     return [verify(citation, use_llm=use_llm, dataset=available) for citation in citations]

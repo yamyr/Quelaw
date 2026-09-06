@@ -7,7 +7,7 @@ from markdown_it import MarkdownIt
 
 from quelaw.pipeline import check_draft
 from quelaw.report import report_to_markdown
-from quelaw.sandbox import dataset_cached
+from quelaw.sandbox import load_current_dataset
 
 
 def test_repeated_findings_keep_identity_evidence_and_corrections_in_exports():
@@ -21,7 +21,7 @@ def test_repeated_findings_keep_identity_evidence_and_corrections_in_exports():
     markdown = report_to_markdown(report)
     assert payload["schema_version"] == 2
     assert payload["draft_sha256"] == hashlib.sha256(draft.encode()).hexdigest()
-    assert payload["dataset_fingerprint"] == dataset_cached().fingerprint
+    assert payload["dataset_fingerprint"] == load_current_dataset().fingerprint
     assert payload["verifier"]["mode"] == "heuristic"
     assert payload["summary"]["total"] == 3
     assert payload["summary"]["distinct_authorities"] == 2

@@ -9,7 +9,7 @@ import hashlib
 from .extraction import extract_citations
 from .report import build_report
 from .provenance import Dataset
-from .sandbox import dataset_cached
+from .sandbox import load_current_dataset
 from .schema import Citation, CorrectionProposal, Report
 from .verification import verify_all
 
@@ -18,7 +18,7 @@ def check_draft(
     text: str, use_llm: bool | None = None, *, dataset: Dataset | None = None,
 ) -> tuple[Report, list[Citation]]:
     """Run the full pipeline on a draft. Returns ``(report, citations)``."""
-    sources = dataset if dataset is not None else dataset_cached()
+    sources = dataset if dataset is not None else load_current_dataset()
     draft_sha256 = hashlib.sha256(text.encode("utf-8")).hexdigest()
     citations = extract_citations(text, use_llm=use_llm)
     results = verify_all(citations, use_llm=use_llm, dataset=sources)

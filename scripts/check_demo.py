@@ -2,24 +2,24 @@
 
     uv run --locked python scripts/check_demo.py
 
-Exercises extraction -> retrieval -> verification -> report end to end. Uses the
-offline heuristic verifier by default (no API key required).
+Exercises extraction -> heuristic verification -> report end to end.
+Always offline, even when a Claude API key is configured.
 """
 import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from quelaw.config import DEMO_DIR, llm_enabled  # noqa: E402
+from quelaw.config import DEMO_DIR  # noqa: E402
 from quelaw.pipeline import check_draft  # noqa: E402
 from quelaw.schema import STATUS_LABEL  # noqa: E402
 
 
 def main() -> None:
     draft = (DEMO_DIR / "golden_path.txt").read_text(encoding="utf-8")
-    print(f"LLM verification: {'ENABLED (Claude)' if llm_enabled() else 'disabled (offline heuristic)'}\n")
+    print("Verification: offline heuristic (Claude disabled)\n")
 
-    report, citations = check_draft(draft)
+    report, citations = check_draft(draft, use_llm=False)
 
     print(f"Extracted {len(citations)} authorities:\n")
     for r in report.results:

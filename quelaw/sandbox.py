@@ -5,7 +5,6 @@ Singapore legal materials stored as JSON files under ``data/sandbox/``.
 """
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import List
 
 from .config import SANDBOX_DIR
@@ -23,22 +22,6 @@ def load_documents() -> List[dict]:
     return docs
 
 
-@lru_cache(maxsize=1)
-def dataset_cached() -> Dataset:
-    """Cached immutable source evidence for repeated checks in one session."""
+def load_current_dataset() -> Dataset:
+    """Read fresh evidence once per check; callers can pass a snapshot explicitly."""
     return load_dataset(SANDBOX_DIR)
-
-
-@lru_cache(maxsize=1)
-def _cached_documents() -> tuple:
-    return tuple(load_documents())
-
-
-def documents_cached() -> List[dict]:
-    """Cached view of the sandbox (cheap repeated reads during a request)."""
-    return list(_cached_documents())
-
-
-def reset_cache() -> None:
-    _cached_documents.cache_clear()
-    dataset_cached.cache_clear()
