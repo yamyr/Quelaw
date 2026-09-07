@@ -11,7 +11,13 @@ deterministic and needs no API key, no internet, and no pre-built index.
 """
 from __future__ import annotations
 
+from io import BytesIO
+from zipfile import BadZipFile
+
+from docx import Document
+from lxml.etree import XMLSyntaxError
 import streamlit as st
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from quelaw import config, demo, vectorstore
 from quelaw.pipeline import check_draft
@@ -26,21 +32,38 @@ def _load_demo() -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-def _read_upload(uploaded) -> str:
+def _read_upload(uploaded: UploadedFile) -> str:
     name = uploaded.name.lower()
     if name.endswith(".txt"):
-        return uploaded.read().decode("utf-8", errors="replace")
-    if name.endswith(".docx"):
         try:
-            import io
+            text = uploaded.getvalue().decode("utf-8-sig")
+        except UnicodeDecodeError as error:
+            raise ValueError("Save the text file as UTF-8 and upload it again.") from error
+    elif name.endswith(".docx"):
+        try:
+            doc = Document(BytesIO(uploaded.getvalue()))
+            text = "\n".join(p.text for p in doc.paragraphs)
+        except (BadZipFile, KeyError, ValueError, XMLSyntaxError) as error:
+            raise ValueError("Could not read this Word document. Upload a valid .docx or paste the text.") from error
+    else:
+        raise ValueError("Upload a .txt or .docx file.")
+    if not text.strip():
+        raise ValueError("No readable draft text was found. Paste the text or choose another file.")
+    return text
 
-            from docx import Document
 
-            doc = Document(io.BytesIO(uploaded.read()))
-            return "\n".join(p.text for p in doc.paragraphs)
-        except Exception as e:
-            st.warning(f"Could not read .docx ({e}). Paste the text instead.")
-    return ""
+def _switch_demo_mode() -> None:
+    for key in ("draft", "report", "reported_draft"):
+        saved_key = f"normal_{key}"
+        if st.session_state["demo_mode"]:
+            if key in st.session_state:
+                st.session_state[saved_key] = st.session_state.pop(key)
+        else:
+            st.session_state.pop(key, None)
+            if saved_key in st.session_state:
+                st.session_state[key] = st.session_state.pop(saved_key)
+    st.session_state.pop("demo_scenario_id", None)
+    st.session_state.pop("correction_notice", None)
 
 
 try:
@@ -58,8 +81,11 @@ with st.sidebar:
     demo_mode = st.toggle(
         "🎬 Demo mode",
         value=False,
+        key="demo_mode",
+        on_change=_switch_demo_mode,
         help="Curated scenarios, fully offline and deterministic — for live demos. "
-        "Bypasses Claude so the result is identical every time.",
+        "Bypasses Claude so the result is identical every time. "
+        "Your normal draft and report are restored when you turn this off.",
     )
 
     index_state = vectorstore.index_status(dataset)
@@ -136,9 +162,19 @@ else:
         if st.button("📄 Load demo draft", width="stretch"):
             st.session_state["draft"] = _load_demo()
         uploaded = st.file_uploader("Or upload .txt / .docx", type=["txt", "docx"])
+        if uploaded is None:
+            st.session_state.pop("upload_error", None)
         if uploaded is not None and st.session_state.get("loaded_upload_id") != uploaded.file_id:
-            st.session_state["draft"] = _read_upload(uploaded)
+            try:
+                uploaded_draft = _read_upload(uploaded)
+            except ValueError as error:
+                st.session_state["upload_error"] = str(error)
+            else:
+                st.session_state["draft"] = uploaded_draft
+                st.session_state.pop("upload_error", None)
             st.session_state["loaded_upload_id"] = uploaded.file_id
+        if "upload_error" in st.session_state:
+            st.warning(f"{st.session_state['upload_error']} Your draft is unchanged.")
 
 draft = st.text_area(
     "Legal draft",

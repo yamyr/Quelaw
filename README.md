@@ -54,7 +54,9 @@ The first setup requires internet access to obtain dependencies and, if needed, 
 
 For day-to-day development on macOS/Linux, use `make setup`, then `make dev-offline`. Run `make check-fast` while iterating and `make check` before a pull request. `make upgrade` updates compatible packages and the runtime export. See the [development workflow](CONTRIBUTING.md#daily-development) for targeted tests, optional Claude mode, and portable commands.
 
-In the app, turn on **🎬 Demo mode**, choose a scenario, and click **▶️ Run scenario**. Demo verification runs offline after setup, with no API key, embedding download, or pre-built index. The draft remains editable.
+In the app, turn on **🎬 Demo mode**, choose a scenario, and click **▶️ Run scenario**. Demo verification runs offline after setup, with no API key, embedding download, or pre-built index. The draft remains editable. Turning demo mode off restores your normal draft and report for the current session.
+
+Uploads replace the editor only after the file is read successfully and contains text. Empty or unreadable files preserve your draft and report and show an error notice. Text files must use UTF-8 (with or without a byte-order mark). Word imports currently read body paragraphs; paste any text from tables, headers, footnotes, or text boxes that also needs checking.
 
 For a free-text example, click **📄 Load demo draft**, then **🔍 Check Draft**. This memo includes `Spandeck … [2007] SGCA 37`, the planted example `Tan Ah Kow v Singapore Airlines [2025] SGHC 999`, a statute, and a rule.
 

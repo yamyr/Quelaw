@@ -90,6 +90,11 @@ The draft remains editable in normal and demo modes. Selecting a different
 demo scenario loads its draft; ordinary reruns preserve edits. Normal mode
 supports loading the demo draft or uploading `.txt` and `.docx` files. A loaded
 upload is identified in session state so reruns do not overwrite later edits.
+Rejected or empty uploads leave the draft and report intact and show a native
+warning until the file is replaced or removed. Text uploads require UTF-8
+(an optional byte-order mark is accepted); decoding never replaces characters.
+Entering demo mode temporarily saves the normal draft and report in session
+memory. Leaving demo mode restores them; each demo visit starts a fresh scenario.
 Checking an empty draft shows an error. Demo runs explicitly use the offline
 heuristic verifier and require neither an API key nor an index.
 

@@ -293,3 +293,64 @@ def test_model_review_reason_uses_plain_text_widget(app: AppTest) -> None:
     assert all(reason not in item.value for item in [*app.warning, *app.markdown])
     assert any("Review reasons" in item.value for item in app.markdown)
     assert any("Overall risk: Medium" in item.value for item in app.warning)
+
+
+@pytest.mark.parametrize(
+    ("filename", "content"),
+    [("broken.docx", b"not a zip"), ("empty.txt", b" \n\t"),
+     ("invalid.txt", b"See [2007] SGCA 37.\xff")],
+)
+def test_rejected_upload_preserves_draft_and_report(
+    app: AppTest, filename: str, content: bytes,
+) -> None:
+    app.text_area[0].set_value(demo.CLEAN.draft).run()
+    _check_draft(app)
+    app.file_uploader[0].set_value((filename, content, "application/octet-stream")).run()
+    assert not app.exception
+    assert app.text_area[0].value == demo.CLEAN.draft
+    assert len(app.download_button) == 2
+    assert any("draft is unchanged" in item.value for item in app.warning)
+    app.run()
+    assert any("draft is unchanged" in item.value for item in app.warning)
+    app.file_uploader[0].clear().run()
+    assert app.text_area[0].value == demo.CLEAN.draft
+    assert not any("draft is unchanged" in item.value for item in app.warning)
+    app.file_uploader[0].set_value(("valid.txt", b"See [2007] SGCA 37.", "text/plain")).run()
+    assert app.text_area[0].value == "See [2007] SGCA 37."
+    assert not any("draft is unchanged" in item.value for item in app.warning)
+
+
+def test_demo_round_trip_restores_normal_draft_and_report(app: AppTest) -> None:
+    app.text_area[0].set_value("My draft: [2007] SGCA 37.").run()
+    _check_draft(app)
+    _load_scenario(app, demo.WRONG_CITATION)
+    _check_draft(app)
+    app.toggle[0].set_value(False).run()
+    assert not app.exception
+    assert app.text_area[0].value == "My draft: [2007] SGCA 37."
+    assert app.session_state["report"].summary["verified"] == 1
+    assert len(app.download_button) == 2
+    app.toggle[0].set_value(True).run()
+    assert app.text_area[0].value in [scenario.draft for scenario in demo.SCENARIOS]
+    app.toggle[0].set_value(False).run()
+    assert app.text_area[0].value == "My draft: [2007] SGCA 37."
+
+
+def test_utf8_bom_upload_preserves_text_without_bom(app: AppTest) -> None:
+    draft = "Memo — [2007] SGCA 37.\n"
+    app.file_uploader[0].set_value(("memo.txt", draft.encode("utf-8-sig"), "text/plain")).run()
+    assert not app.exception
+    assert app.text_area[0].value == draft
+
+
+def test_empty_word_upload_preserves_draft(app: AppTest) -> None:
+    from io import BytesIO
+    from docx import Document
+
+    content = BytesIO()
+    Document().save(content)
+    app.text_area[0].set_value(demo.CLEAN.draft).run()
+    app.file_uploader[0].set_value(("empty.docx", content.getvalue(), "application/octet-stream")).run()
+    assert not app.exception
+    assert app.text_area[0].value == demo.CLEAN.draft
+    assert any("No readable draft text" in item.value for item in app.warning)
